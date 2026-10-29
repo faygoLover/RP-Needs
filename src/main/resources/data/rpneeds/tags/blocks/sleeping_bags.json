@@ -1,0 +1,69 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "camping:sleeping_bag_white",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_orange",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_magenta",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_light_blue",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_yellow",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_lime",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_pink",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_gray",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_light_gray",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_cyan",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_purple",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_blue",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_brown",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_green",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_red",
+      "required": false
+    },
+    {
+      "id": "camping:sleeping_bag_black",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "rpneeds.msg.stage1": "Your eyes are getting heavy",
+  "rpneeds.msg.stage2": "You feel drowsy",
+  "rpneeds.msg.stage3": "You are dead on your feet",
+  "rpneeds.msg.stage4": "You are falling asleep standing",
+  "rpneeds.msg.collapse": "You collapsed and fell asleep right here",
+  "rpneeds.msg.rested": "Well rested",
+  "rpneeds.msg.caffeine": "Caffeine keeps you awake",
+  "rpneeds.msg.not_sleepy": "You are not sleepy",
+  "rpneeds.stage.0": "alert",
+  "rpneeds.stage.1": "sleepy",
+  "rpneeds.stage.2": "drowsy",
+  "rpneeds.stage.3": "dead on feet",
+  "rpneeds.stage.4": "falling asleep",
+  "rpneeds.cmd.info": "%s: alertness %s%%, sleep debt %s min, %s, caffeine %s min left",
+  "rpneeds.cmd.set": "Alertness %2$s%% — players: %1$s"
+}
