@@ -201,6 +201,9 @@ public final class SleepService {
         if (sp.tickCount % 20 != 0) return;
         if (!counts(sp)) {
             slow(sp, SLOW, 0);
+            // Творческий: потребности не идут, но в кровати засыпает сразу и спит, пока не встанет.
+            if (sp.isCreative() && sp.isSleeping() && !t.getBoolean("asleep")) setBedAsleep(sp, t, true);
+            if (!sp.isSleeping() && t.getBoolean("asleep")) setBedAsleep(sp, t, false);
             return;
         }
         timers(sp, t);
@@ -367,7 +370,7 @@ public final class SleepService {
 
     /** Лечь в кровать можно в любое время суток (уснуть — по правилам выше). */
     public static void onSleepTime(SleepingTimeCheckEvent e) {
-        if (e.getEntity() instanceof ServerPlayer sp && counts(sp)) e.setResult(Event.Result.ALLOW);
+        if (e.getEntity() instanceof ServerPlayer sp && !sp.isSpectator()) e.setResult(Event.Result.ALLOW);
     }
 
     /** Для ночи RP Time: лежит в кровати, но не уснул — не спит. */
