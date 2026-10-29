@@ -32,6 +32,18 @@ public final class NeedsConfig {
     public static final ForgeConfigSpec.DoubleValue CAFFEINE_SHARE;
     public static final ForgeConfigSpec.DoubleValue CAFFEINE_DRAIN_MULT;
     public static final ForgeConfigSpec.DoubleValue OFFLINE_REST_SLEEPS;
+    public static final ForgeConfigSpec.DoubleValue SEAT_MULT;
+    public static final ForgeConfigSpec.DoubleValue SIT_MULT;
+    public static final ForgeConfigSpec.DoubleValue NIGHT_SLEEP_BELOW;
+    public static final ForgeConfigSpec.DoubleValue COOLDOWN_ABOVE;
+    public static final ForgeConfigSpec.IntValue COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.DoubleValue PAIN_NO_SLEEP;
+    public static final ForgeConfigSpec.DoubleValue NIGHTMARE_PER_SLEEPS;
+    public static final ForgeConfigSpec.DoubleValue VOICE_RADIUS;
+    public static final ForgeConfigSpec.DoubleValue SHOT_RADIUS;
+    public static final ForgeConfigSpec.DoubleValue EXPLOSION_RADIUS;
+    public static final ForgeConfigSpec.DoubleValue SLEEP_AID_DROP_PER_SECOND;
+    public static final ForgeConfigSpec.DoubleValue SLEEP_AID_FLOOR;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -64,14 +76,39 @@ public final class NeedsConfig {
                 .defineInRange("full_sleep_share", 1.0 / 12.0, 0.001, 10.0);
         BAG_MULT = b.comment("Спальник (тег блоков rpneeds:sleeping_bags): скорость сна.")
                 .defineInRange("bag_mult", 0.7, 0.0, 5.0);
-        POSTURE_MULT = b.comment("Сидя, лёжа на земле или на сиденье (/sleep RP Core): скорость сна — заметно хуже.")
-                .defineInRange("posture_mult", 0.4, 0.0, 5.0);
+        POSTURE_MULT = b.comment("Лёжа на земле (/lay, /sleep): скорость сна.")
+                .defineInRange("lay_mult", 0.4, 0.0, 5.0);
+        SIT_MULT = b.comment("Сидя на земле (/sit, /sleep): скорость сна — ещё хуже, чем лёжа.")
+                .defineInRange("sit_mult", 0.3, 0.0, 5.0);
+        SEAT_MULT = b.comment("На сиденье мода (кресло, диван, скамья; /sleep): скорость сна.")
+                .defineInRange("seat_mult", 0.5, 0.0, 5.0);
         HUNGRY_SLEEP_MULT = b.comment("Очень голоден или очень хочет пить: сон медленнее во столько раз.")
                 .defineInRange("hungry_sleep_mult", 0.7, 0.0, 1.0);
-        DAY_SLEEP_BELOW = b.comment("Днём в кровать пускает, если бодрость ниже этого (%). Ночью — всегда.")
+        DAY_SLEEP_BELOW = b.comment("Днём засыпает (в кровати и /sleep), если бодрость ниже этого (%). Лечь можно всегда.")
                 .defineInRange("day_sleep_below", 70.0, 0.0, 100.0);
-        POSTURE_SLEEP_BELOW = b.comment("Уснуть сидя или лёжа можно, если бодрость ниже этого (%).")
+        NIGHT_SLEEP_BELOW = b.comment("Ночью засыпает, если бодрость ниже этого (%).")
+                .defineInRange("night_sleep_below", 90.0, 0.0, 100.0);
+        POSTURE_SLEEP_BELOW = b.comment("Не используется с 0.2.0 (порог — day/night_sleep_below).")
                 .defineInRange("posture_sleep_below", 90.0, 0.0, 100.0);
+        COOLDOWN_ABOVE = b.comment("Разбуженный не может уснуть снова, если бодрость выше этого (%)…")
+                .defineInRange("cooldown_above", 20.0, 0.0, 100.0);
+        COOLDOWN_SECONDS = b.comment("…столько секунд (Бессонница — 300).")
+                .defineInRange("cooldown_seconds", 120, 0, 3600);
+        PAIN_NO_SLEEP = b.comment("Боль (RP Medicine) выше этого не даёт уснуть; седация 20+ (диазепам) снимает запрет.")
+                .defineInRange("pain_no_sleep", 70.0, 0.0, 101.0);
+        NIGHTMARE_PER_SLEEPS = b.comment("Кошмар в кровати при полном рассудке — примерно раз за столько полных снов.",
+                        "Хуже место и ниже рассудок — чаще (см. дизайн). 0 — без кошмаров.")
+                .defineInRange("nightmare_per_sleeps", 10.0, 0.0, 10000.0);
+        VOICE_RADIUS = b.comment("Голос (не шёпот) будит ближе стольких блоков (Чуткий сон — 8, Крепкий — не будит).")
+                .defineInRange("voice_radius", 5.0, 0.0, 64.0);
+        SHOT_RADIUS = b.comment("Выстрелы (TaCZ) будят ближе стольких блоков (Чуткий сон — 24, Крепкий — не будят).")
+                .defineInRange("shot_radius", 16.0, 0.0, 128.0);
+        EXPLOSION_RADIUS = b.comment("Взрывы будят ближе стольких блоков (Крепкий сон и снотворное — 8).")
+                .defineInRange("explosion_radius", 24.0, 0.0, 128.0);
+        SLEEP_AID_DROP_PER_SECOND = b.comment("Снотворное (RP Medicine): пока не спит, бодрость падает на столько % в секунду…")
+                .defineInRange("sleep_aid_drop_per_second", 0.5, 0.0, 100.0);
+        SLEEP_AID_FLOOR = b.comment("…но не ниже этого (%).")
+                .defineInRange("sleep_aid_floor", 10.0, 0.0, 100.0);
         OFFLINE_REST_SLEEPS = b.comment("Не был в сети столько полных снов в кровати (2 — при сутках 3 ч 30 мин) — при входе выспался.",
                         "Не чаще раза в игровые сутки. Был вне сети, когда проспали ночь, — тоже выспался.")
                 .defineInRange("offline_rest_sleeps", 2.0, 0.0, 100.0);

@@ -47,6 +47,10 @@ minecraft {
         server {
             args '--nogui'
         }
+
+        gameTestServer {
+            property 'forge.enabledGameTestNamespaces', mod_id
+        }
     }
 }
 
@@ -62,6 +66,11 @@ repositories {
         url = 'https://api.modrinth.com/maven'
         content { includeGroup 'maven.modrinth' }
     }
+    maven {
+        name = 'Henkelmax'
+        url = 'https://maven.maxhenkel.de/repository/public'
+        content { includeGroup 'de.maxhenkel.voicechat' }
+    }
 }
 
 def flag = { String name -> (project.findProperty(name) ?: 'false').toString().toBoolean() }
@@ -71,6 +80,13 @@ dependencies {
 
     // Обязательный: RP Core (время RP, сутки, позы и сон сидя/лёжа, база напитков с кофеином).
     implementation fg.deobf("blank:rpcore:${rpcore_version}")
+
+    // Необязательные: только для компиляции — голос будит (Simple Voice Chat), выстрелы будят (TaCZ).
+    compileOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
+    compileOnly fg.deobf("maven.modrinth:timeless-and-classics-zero:${tacz_version}")
+
+    // Разработка: RP Core требует FL Render (jar в libs/).
+    runtimeOnly fg.deobf("blank:flrender:0.3.1-1.20.1-forge")
 }
 
 tasks.named('processResources', ProcessResources).configure {

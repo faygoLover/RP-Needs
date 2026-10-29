@@ -14,16 +14,18 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-/** Сетевой канал {@code rpneeds:main}: микросон — самому игроку. */
+/** Сетевой канал {@code rpneeds:main}: микросон и «уснул ли в кровати» — самому игроку. */
 public final class NeedsNetwork {
     private NeedsNetwork() {}
 
-    private static final String VERSION = "1";
+    private static final String VERSION = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(RpNeeds.MODID, "main"), () -> VERSION, VERSION::equals, VERSION::equals);
 
     public static void register() {
         CHANNEL.registerMessage(0, Microsleep.class, Microsleep::encode, Microsleep::decode, Microsleep::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(1, BedSleep.class, BedSleep::encode, BedSleep::decode, BedSleep::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
@@ -44,6 +46,23 @@ public final class NeedsNetwork {
         static void handle(Microsleep m, Supplier<NetworkEvent.Context> ctx) {
             ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
                     () -> () -> faygolover.rpneeds.client.NeedsClient.microsleep(m.ticks)));
+            ctx.get().setPacketHandled(true);
+        }
+    }
+
+    /** В кровати уснул или ещё (уже) не спит: пока не спит, экран не темнеет. */
+    public record BedSleep(boolean asleep) {
+        static void encode(BedSleep m, FriendlyByteBuf buf) {
+            buf.writeBoolean(m.asleep);
+        }
+
+        static BedSleep decode(FriendlyByteBuf buf) {
+            return new BedSleep(buf.readBoolean());
+        }
+
+        static void handle(BedSleep m, Supplier<NetworkEvent.Context> ctx) {
+            ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                    () -> () -> faygolover.rpneeds.client.NeedsClient.bedAsleep(m.asleep)));
             ctx.get().setPacketHandled(true);
         }
     }

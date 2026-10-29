@@ -1,8 +1,13 @@
 package faygolover.rpneeds;
 
 import com.mojang.brigadier.arguments.DoubleArgumentType;
+import faygolover.rpcore.api.RpCoreAPI;
+import faygolover.rpcore.api.StatusLines;
+import faygolover.rpcore.api.event.RpAlarmEvent;
 import faygolover.rpcore.api.event.RpConsumeEvent;
 import faygolover.rpcore.api.event.RpPostureSleepEvent;
+import faygolover.rpcore.api.event.RpPostureWakeEvent;
+import faygolover.rpcore.api.event.RpSleepCountEvent;
 import faygolover.rpcore.api.event.RpTimeSkipEvent;
 import faygolover.rpcore.api.event.RpTimeSkipOfflineEvent;
 import net.minecraft.ChatFormatting;
@@ -15,7 +20,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -27,7 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.Locale;
 
-/** RP Needs: сон (0.1.0). Гигиена — следующей версией (план {@code docs/00_plan.md}). */
+/** RP Needs — потребности: сон (0.2.0, дизайн «RP Needs: сон»), дальше чистота (план {@code docs/00_plan.md}). */
 @Mod(RpNeeds.MODID)
 public final class RpNeeds {
     public static final String MODID = "rpneeds";
@@ -39,55 +46,64 @@ public final class RpNeeds {
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, NeedsConfig.SPEC);
         var bus = MinecraftForge.EVENT_BUS;
         bus.addListener(SleepService::onPlayerTick);
-        bus.addListener(SleepService::onSleepInBed);
         bus.addListener(SleepService::onSleepTime);
+        bus.addListener(SleepService::onHurt);
+        bus.addListener(SleepService::onExplosion);
         bus.addListener(SleepService::onLogin);
         bus.addListener(SleepService::onLogout);
         bus.addListener(SleepService::onClone);
-        bus.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false, RpPostureSleepEvent.class, SleepService::onPostureSleep);
-        bus.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false, RpConsumeEvent.class, SleepService::onConsume);
-        bus.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false, RpTimeSkipEvent.class, SleepService::onSkip);
-        bus.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false, RpTimeSkipOfflineEvent.class, SleepService::onSkipOffline);
+        bus.addListener(EventPriority.NORMAL, false, RpPostureSleepEvent.class, SleepService::onPostureSleep);
+        bus.addListener(EventPriority.NORMAL, false, RpPostureWakeEvent.class, SleepService::onPostureWake);
+        bus.addListener(EventPriority.LOW, false, RpSleepCountEvent.class, SleepService::onSleepCount);
+        bus.addListener(EventPriority.NORMAL, false, RpAlarmEvent.class, SleepService::onAlarm);
+        bus.addListener(EventPriority.NORMAL, false, RpConsumeEvent.class, SleepService::onConsume);
+        bus.addListener(EventPriority.NORMAL, false, RpTimeSkipEvent.class, SleepService::onSkip);
+        bus.addListener(EventPriority.NORMAL, false, RpTimeSkipOfflineEvent.class, SleepService::onSkipOffline);
         bus.addListener(RpNeeds::onCommands);
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> faygolover.rpneeds.client.NeedsClient::init);
     }
 
     private void commonSetup(FMLCommonSetupEvent e) {
         NeedsNetwork.register();
+        e.enqueueWork(() -> {
+            StatusLines.register(NeedsStatus.INSTANCE);
+            RpCoreAPI.registerModule(MODID, "потребности: сон");
+            if (ModList.get().isLoaded("tacz")) faygolover.rpneeds.integration.TaczShots.register();
+        });
     }
 
-    /** {@code /needs info [игрок]}, {@code /needs set <игроки> <0–100>} — для ведущего. */
+    /**
+     * Для ведущего: {@code /rpneeds set <игроки> sleep <0–100>} (потом — hygiene, hands) и {@code /rpneeds reset <игроки>}.
+     * Посмотреть — сканером и в панели ГМа RP Medicine.
+     */
     private static void onCommands(RegisterCommandsEvent e) {
-        e.getDispatcher().register(Commands.literal("needs").requires(s -> s.hasPermission(2))
-                .then(Commands.literal("info")
-                        .executes(c -> info(c.getSource(), c.getSource().getPlayerOrException()))
-                        .then(Commands.argument("player", EntityArgument.player())
-                                .executes(c -> info(c.getSource(), EntityArgument.getPlayer(c, "player")))))
+        e.getDispatcher().register(Commands.literal("rpneeds").requires(s -> s.hasPermission(2))
                 .then(Commands.literal("set").then(Commands.argument("targets", EntityArgument.players())
-                        .then(Commands.argument("alertness", DoubleArgumentType.doubleArg(0, 100))
-                                .executes(c -> set(c.getSource(), EntityArgument.getPlayers(c, "targets"),
-                                        DoubleArgumentType.getDouble(c, "alertness")))))));
+                        .then(Commands.literal("sleep").then(Commands.argument("value", DoubleArgumentType.doubleArg(0, 100))
+                                .executes(c -> setSleep(c.getSource(), EntityArgument.getPlayers(c, "targets"),
+                                        DoubleArgumentType.getDouble(c, "value")))))))
+                .then(Commands.literal("reset").then(Commands.argument("targets", EntityArgument.players())
+                        .executes(c -> reset(c.getSource(), EntityArgument.getPlayers(c, "targets"))))));
     }
 
-    private static int info(CommandSourceStack src, ServerPlayer sp) {
-        CompoundTag t = SleepService.data(sp);
-        String alert = String.format(Locale.ROOT, "%.0f", t.getDouble("alert"));
-        String debt = String.format(Locale.ROOT, "%.0f", t.getDouble("debt") / 60.0);
-        String caf = String.format(Locale.ROOT, "%.0f", t.getDouble("cafLeft") / 60.0);
-        int stage = SleepService.stage(t);
-        src.sendSuccess(() -> Component.translatable("rpneeds.cmd.info", sp.getDisplayName(), alert, debt,
-                Component.translatable("rpneeds.stage." + stage), caf).withStyle(ChatFormatting.GOLD), false);
-        return 1;
-    }
-
-    private static int set(CommandSourceStack src, Collection<ServerPlayer> targets, double value) {
+    private static int setSleep(CommandSourceStack src, Collection<ServerPlayer> targets, double value) {
         for (ServerPlayer sp : targets) {
             CompoundTag t = SleepService.data(sp);
             t.putDouble("alert", value);
             t.putDouble("debt", 0);
         }
-        src.sendSuccess(() -> Component.translatable("rpneeds.cmd.set", targets.size(), String.format(Locale.ROOT, "%.0f", value))
+        src.sendSuccess(() -> Component.translatable("rpneeds.cmd.set_sleep", targets.size(), String.format(Locale.ROOT, "%.0f", value))
                 .withStyle(ChatFormatting.GOLD), true);
+        return targets.size();
+    }
+
+    private static int reset(CommandSourceStack src, Collection<ServerPlayer> targets) {
+        for (ServerPlayer sp : targets) {
+            CompoundTag t = SleepService.data(sp);
+            for (String k : new String[]{"debt", "cafLeft", "cafDose", "cooldown", "nightmare", "heavy", "stage"}) t.remove(k);
+            t.putDouble("alert", 100);
+        }
+        src.sendSuccess(() -> Component.translatable("rpneeds.cmd.reset", targets.size()).withStyle(ChatFormatting.GOLD), true);
         return targets.size();
     }
 }
