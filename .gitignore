@@ -5,3 +5,4 @@ out/
 *.log
 .idea/
 libs/pack/
+libs/*.jar
