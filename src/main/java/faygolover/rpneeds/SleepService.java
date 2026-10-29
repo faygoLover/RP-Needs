@@ -435,8 +435,14 @@ public final class SleepService {
         if (!(e.getEntity() instanceof ServerPlayer sp) || !counts(sp) || e.scope() != RpTimeSkipEvent.Scope.ALL) return;
         CompoundTag t = data(sp);
         double day = day(), secs = e.seconds();
-        if (e.sleeping()) change(t, 100.0 / (NeedsConfig.FULL_SLEEP_SHARE.get() * day) * secs);
-        else {
+        if (e.sleeping()) {
+            // Место сна (кровать, спальник, поза) и качество от команды (усадили спать — ×0,8).
+            int place = place(sp);
+            double mult = placeMult(sp, place < 0 ? 5 : place) * e.quality();
+            if (has(sp, SHORT)) mult *= 1.5;
+            if (has(sp, INSOMNIA)) mult *= 0.7;
+            change(t, 100.0 / (NeedsConfig.FULL_SLEEP_SHARE.get() * day) * secs * mult);
+        } else {
             double before = t.getDouble("alert");
             change(t, -100.0 / (NeedsConfig.AWAKE_SHARE.get() * day) * secs);
             double floor = Math.min(RpCoreAPI.skipFloor() * 100, before);
@@ -446,6 +452,11 @@ public final class SleepService {
             }
         }
         caffeineTick(sp, t, secs);
+        // /rptime sleep: после прокрутки все просыпаются, как утром (поза и кровать остаются).
+        if (e.wakeAfter()) {
+            wake(sp, "rpneeds.msg.woke_morning", false);
+            t.putInt("cooldown", 0);
+        }
     }
 
     public static void onSkipOffline(RpTimeSkipOfflineEvent e) {

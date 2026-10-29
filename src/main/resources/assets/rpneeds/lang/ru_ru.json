@@ -44,5 +44,6 @@
   "rpneeds.status.gm_in_bed": "Лежит в кровати, не спит",
   "rpneeds.status.gm_aid": "Снотворное в крови: %s%% дозы",
   "rpneeds.cmd.set_sleep": "Бодрость %2$s%% — игроков: %1$s",
-  "rpneeds.cmd.reset": "Потребности в норме — игроков: %s"
+  "rpneeds.cmd.reset": "Потребности в норме — игроков: %s",
+  "rpneeds.msg.woke_morning": "Вы проснулись"
 }
