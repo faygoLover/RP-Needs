@@ -87,6 +87,18 @@ dependencies {
 
     // Разработка: RP Core требует FL Render (jar в libs/).
     runtimeOnly fg.deobf("blank:flrender:0.3.1-1.20.1-forge")
+
+    // Игровые тесты сна вместе с семьёй: время, питание, тело, психика, черты, выносливость (jar-ы в libs/).
+    compileOnly fg.deobf("blank:rpmedicine:0.9.3-1.20.1-forge")
+    compileOnly fg.deobf("blank:rpculinary:0.8.1-1.20.1-forge")
+    if (!flag('alone')) {
+        runtimeOnly fg.deobf("blank:rptime:1.1.0-1.20.1-forge")
+        runtimeOnly fg.deobf("blank:rpculinary:0.8.1-1.20.1-forge")
+        runtimeOnly fg.deobf("blank:rpmedicine:0.9.3-1.20.1-forge")
+        runtimeOnly fg.deobf("blank:rppsyche:0.2.3-1.20.1-forge")
+        runtimeOnly fg.deobf("blank:rpperks:2.6.0-1.20.1-forge")
+        runtimeOnly fg.deobf("blank:rpstamina:1.5.1-1.20.1-forge")
+    }
 }
 
 tasks.named('processResources', ProcessResources).configure {

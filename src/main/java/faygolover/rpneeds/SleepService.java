@@ -181,9 +181,15 @@ public final class SleepService {
         if (t.getDouble("cafLeft") > 0 && t.getDouble("alert") > 0) return "rpneeds.msg.caffeine";
         BodyProvider b = RpCoreAPI.body();
         if (b != null && b.pain(sp) > NeedsConfig.PAIN_NO_SLEEP.get() && b.sedation(sp) < 20) return "rpneeds.msg.pain";
-        double limit = sp.level().isNight() ? NeedsConfig.NIGHT_SLEEP_BELOW.get() : NeedsConfig.DAY_SLEEP_BELOW.get();
+        double limit = night(sp) ? NeedsConfig.NIGHT_SLEEP_BELOW.get() : NeedsConfig.DAY_SLEEP_BELOW.get();
         if (t.getDouble("alert") >= limit) return "rpneeds.msg.not_sleepy";
         return null;
+    }
+
+    /** Ночь по часам (как в RP Time: с 18:30 до 5:30), а не по яркости неба — та обновляется с опозданием. */
+    static boolean night(ServerPlayer sp) {
+        long t = sp.level().getDayTime() % 24000L;
+        return t >= 12500 && t < 23500;
     }
 
     /** Бессонница: 30 % попыток уснуть не выходят. */
@@ -224,11 +230,11 @@ public final class SleepService {
             if (n != null && (n.hungerStage(sp) >= 2 || n.thirstStage(sp) >= 2)) rate *= NeedsConfig.HUNGRY_SLEEP_MULT.get();
             change(t, rate);
             t.putInt("place", place);
+            t.putInt("slept", t.getInt("slept") + 1);
             Wakers.asleepTick(sp, t, place);
             if (t.getDouble("alert") >= 100 && t.getDouble("debt") <= 0) {
-                wake(sp, "rpneeds.msg.rested", false);
                 t.putInt("rested", (int) (day / 6));
-                if (place == 0 || place == 2 || has(sp, UNFUSSY)) MinecraftForge.EVENT_BUS.post(new RpMoodEvent(sp, RpMoodEvent.Kind.RESTED, 1));
+                wake(sp, "rpneeds.msg.rested", false);
             }
         } else {
             double mult = RpCoreAPI.posture(sp) != Posture.NONE || sp.isSleeping() ? NeedsConfig.RESTING_DRAIN_MULT.get() : 1.0;
@@ -309,6 +315,13 @@ public final class SleepService {
 
     static void afterWake(ServerPlayer sp, CompoundTag t) {
         t.putInt("retry", 0);
+        // Психике — сколько проспал в нормальном месте (доля полного сна): снимает стресс, возвращает рассудок.
+        int slept = t.getInt("slept"), place = t.getInt("place");
+        t.putInt("slept", 0);
+        if (slept > 0 && (place == 0 || place == 2 || has(sp, UNFUSSY))) {
+            double full = NeedsConfig.FULL_SLEEP_SHARE.get() * day();
+            MinecraftForge.EVENT_BUS.post(new RpMoodEvent(sp, RpMoodEvent.Kind.RESTED, Math.min(1, slept / full)));
+        }
         if (t.getDouble("alert") > NeedsConfig.COOLDOWN_ABOVE.get())
             t.putInt("cooldown", has(sp, INSOMNIA) ? 300 : NeedsConfig.COOLDOWN_SECONDS.get());
         if (has(sp, HEAVY_WAKING)) {
@@ -392,10 +405,18 @@ public final class SleepService {
         if (e.getEntity() instanceof ServerPlayer sp) afterWake(sp, data(sp));
     }
 
-    /** Удар будит и в кровати (позу будит RP Core). */
+    /** Удар будит и в кровати — ванилла при этом поднимает с кровати (позу будит RP Core, поза остаётся). */
     public static void onHurt(LivingHurtEvent e) {
-        if (e.getEntity() instanceof ServerPlayer sp && e.getAmount() > 0 && sp.isSleeping() && data(sp).getBoolean("asleep"))
-            wake(sp, "rpneeds.msg.woke_hurt", false);
+        if (!(e.getEntity() instanceof ServerPlayer sp) || e.getAmount() <= 0) return;
+        CompoundTag t = data(sp);
+        if (!t.getBoolean("asleep")) return;
+        // Ванилла от удара уже подняла его с кровати — здесь только «проснулся»: откат, вялость, сообщение.
+        if (sp.isSleeping()) wake(sp, "rpneeds.msg.woke_hurt", false);
+        else {
+            setBedAsleep(sp, t, false);
+            afterWake(sp, t);
+            sp.displayClientMessage(Component.translatable("rpneeds.msg.woke_hurt"), true);
+        }
     }
 
     /** Взрывы рядом будят (Крепкий сон и снотворное — только совсем рядом). */
@@ -442,6 +463,8 @@ public final class SleepService {
             if (has(sp, SHORT)) mult *= 1.5;
             if (has(sp, INSOMNIA)) mult *= 0.7;
             change(t, 100.0 / (NeedsConfig.FULL_SLEEP_SHARE.get() * day) * secs * mult);
+            t.putInt("place", place < 0 ? 5 : place);
+            t.putInt("slept", (int) Math.min(Integer.MAX_VALUE / 2, t.getInt("slept") + secs * mult));
         } else {
             double before = t.getDouble("alert");
             change(t, -100.0 / (NeedsConfig.AWAKE_SHARE.get() * day) * secs);
