@@ -5,6 +5,9 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
 }
 
+// Общие версии семейства: текущие jar-ы и версии модов из ../_family (python _family/family.py sync).
+if (file('../_family/family.gradle').exists()) apply from: '../_family/family.gradle'
+
 version = mod_version
 group = mod_group_id
 
@@ -86,18 +89,18 @@ dependencies {
     compileOnly fg.deobf("maven.modrinth:timeless-and-classics-zero:${tacz_version}")
 
     // Разработка: RP Core требует FL Render (jar в libs/).
-    runtimeOnly fg.deobf("blank:flrender:0.3.1-1.20.1-forge")
+    runtimeOnly fg.deobf("blank:flrender:${flrender_version}")
 
     // Игровые тесты сна вместе с семьёй: время, питание, тело, психика, черты, выносливость (jar-ы в libs/).
-    compileOnly fg.deobf("blank:rpmedicine:0.9.3-1.20.1-forge")
-    compileOnly fg.deobf("blank:rpculinary:0.8.1-1.20.1-forge")
+    compileOnly fg.deobf("blank:rpmedicine:${rpmedicine_version}")
+    compileOnly fg.deobf("blank:rpculinary:${rpculinary_version}")
     if (!flag('alone')) {
-        runtimeOnly fg.deobf("blank:rptime:1.1.0-1.20.1-forge")
-        runtimeOnly fg.deobf("blank:rpculinary:0.8.1-1.20.1-forge")
-        runtimeOnly fg.deobf("blank:rpmedicine:0.9.3-1.20.1-forge")
-        runtimeOnly fg.deobf("blank:rppsyche:0.2.3-1.20.1-forge")
-        runtimeOnly fg.deobf("blank:rpperks:2.6.0-1.20.1-forge")
-        runtimeOnly fg.deobf("blank:rpstamina:1.5.1-1.20.1-forge")
+        runtimeOnly fg.deobf("blank:rptime:${rptime_version}")
+        runtimeOnly fg.deobf("blank:rpculinary:${rpculinary_version}")
+        runtimeOnly fg.deobf("blank:rpmedicine:${rpmedicine_version}")
+        runtimeOnly fg.deobf("blank:rppsyche:${rppsyche_version}")
+        runtimeOnly fg.deobf("blank:rpperks:${rpperks_version}")
+        runtimeOnly fg.deobf("blank:rpstamina:${rpstamina_version}")
     }
 }
 
