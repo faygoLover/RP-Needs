@@ -67,6 +67,7 @@ public final class RpNeeds {
         NeedsNetwork.register();
         e.enqueueWork(() -> {
             StatusLines.register(NeedsStatus.INSTANCE);
+            RpCoreAPI.registerSpeechFilter(new net.minecraft.resources.ResourceLocation(MODID, "drowsy"), SleepService::filterSpeech);
             RpCoreAPI.registerModule(MODID, "потребности: сон");
             if (ModList.get().isLoaded("tacz")) faygolover.rpneeds.integration.TaczShots.register();
         });

@@ -84,8 +84,10 @@ public final class SleepService {
         return root.getCompound(TAG);
     }
 
+    /** Сутки тела в реальных секундах: длина суток и {@code /time speed} RP Time (RP Core 0.13.0, слои 06.11). */
     static double day() {
-        return Math.max(60, RpCoreAPI.dayLengthSeconds());
+        double r = RpCoreAPI.rpPerReal();
+        return Math.max(60, r > 0 ? 86400.0 / r : RpCoreAPI.dayLengthSeconds());
     }
 
     /** Стадии: 0 бодр, 1 хочется спать, 2 сонливость, 3 валится с ног, 4 засыпает на ходу. */
@@ -234,7 +236,8 @@ public final class SleepService {
             Wakers.asleepTick(sp, t, place);
             if (t.getDouble("alert") >= 100 && t.getDouble("debt") <= 0) {
                 t.putInt("rested", (int) (day / 6));
-                wake(sp, "rpneeds.msg.rested", false);
+                wake(sp, null, false);
+                sense(sp, "rpneeds.sense.rested" + sp.getRandom().nextInt(2));
             }
         } else {
             double mult = RpCoreAPI.posture(sp) != Posture.NONE || sp.isSleeping() ? NeedsConfig.RESTING_DRAIN_MULT.get() : 1.0;
@@ -338,20 +341,33 @@ public final class SleepService {
             change(t, -NeedsConfig.CAFFEINE_CRASH.get() * t.getDouble("cafDose"));
             t.putDouble("cafDose", 0);
             left = 0;
+            // Откат: бодрость кофеина кончилась, а недосып остался.
+            if (stage(sp, t) >= 1) sense(sp, "rpneeds.sense.caffeine_crash");
         }
         t.putDouble("cafLeft", left);
     }
 
-    /** Стадии: сообщение при ухудшении, замедление, микросны, падение без сил. */
+    /** Стадии: ощущение при ухудшении и напоминания, глаза клиенту, замедление, микросны, падение без сил. */
     private static void effects(ServerPlayer sp, CompoundTag t) {
         int stage = stage(sp, t);
         int was = t.getInt("stage");
         if (stage != was) {
             t.putInt("stage", stage);
-            if (stage > was && stage > 0) sp.displayClientMessage(Component.translatable("rpneeds.msg.stage" + stage), true);
+            if (stage > was && stage > 0) {
+                sense(sp, stage);
+                t.putInt("remind", remindSeconds(stage));
+            }
             t.putInt("micro", 0);
             t.putInt("collapse", 0);
+        } else if (stage >= 1 && stage <= 3 && !asleep(sp)) {
+            int left = t.getInt("remind") - 1;
+            if (left <= 0) {
+                sense(sp, stage);
+                left = remindSeconds(stage);
+            }
+            t.putInt("remind", left);
         }
+        sendStage(sp, asleep(sp) ? 0 : stage);
         slow(sp, SLOW, stage == 2 ? NeedsConfig.DROWSY_SPEED.get() : stage >= 3 ? NeedsConfig.STAGGER_SPEED.get() : 0);
         if (asleep(sp) || sp.isSleeping()) return;
         if (stage == 3) {
@@ -368,6 +384,52 @@ public final class SleepService {
                 t.putInt("collapse", NeedsConfig.COLLAPSE_EVERY_SECONDS.get());
             } else t.putInt("collapse", left - 1);
         }
+    }
+
+    /** Кому какую стадию уже сказали (для глаз клиента). */
+    private static final java.util.Map<UUID, Integer> SENT_STAGE = new java.util.HashMap<>();
+
+    private static void sendStage(ServerPlayer sp, int stage) {
+        Integer sent = SENT_STAGE.get(sp.getUUID());
+        if (sent != null && sent == stage) return;
+        SENT_STAGE.put(sp.getUUID(), stage);
+        NeedsNetwork.send(sp, new NeedsNetwork.Stage(stage, NeedsConfig.BLINK.get(), NeedsConfig.NOD.get()));
+    }
+
+    private static int remindSeconds(int stage) {
+        return switch (stage) {
+            case 1 -> NeedsConfig.REMIND_STAGE1.get();
+            case 2 -> NeedsConfig.REMIND_STAGE2.get();
+            default -> NeedsConfig.REMIND_STAGE3.get();
+        };
+    }
+
+    /** Ощущение стадии (одно из двух). */
+    private static void sense(ServerPlayer sp, int stage) {
+        sense(sp, "rpneeds.sense.s" + Math.min(3, stage) + "." + sp.getRandom().nextInt(2));
+    }
+
+    /** Ощущение в строке RP Medicine; без неё — в строке действия. Галочка {@code symptoms.sensations}. */
+    static void sense(ServerPlayer sp, String key) {
+        if (!NeedsConfig.SENSATIONS.get()) return;
+        var body = RpCoreAPI.body();
+        if (body != null && body.sensation(sp, key)) return;
+        sp.displayClientMessage(Component.translatable(key).withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC), true);
+    }
+
+    /** Речь на стадии «Валится с ног»: редкие обрывы «...» (фильтр речи RP Core — чат и голос). */
+    public static String filterSpeech(ServerPlayer sp, String text, RpCoreAPI.SpeechChannel channel) {
+        if (!NeedsConfig.SPEECH.get() || !counts(sp) || stage(sp, data(sp)) != 3 || text.isEmpty()) return text;
+        String[] words = text.split(" ", -1);
+        double p = NeedsConfig.SPEECH_CUT_CHANCE.get();
+        int cuts = 0;
+        for (int i = 1; i < words.length && cuts < 2; i++) {
+            String w = words[i];
+            if (w.length() < 4 || sp.getRandom().nextDouble() >= p) continue;
+            words[i] = w.substring(0, Math.max(2, w.length() / 2)) + "...";
+            cuts++;
+        }
+        return cuts == 0 ? text : String.join(" ", words);
     }
 
     static void slow(ServerPlayer sp, UUID id, double amount) {
@@ -493,6 +555,7 @@ public final class SleepService {
             t.putBoolean("asleep", false);
             slow(sp, SLOW, 0);
             slow(sp, HEAVY, 0);
+            SENT_STAGE.remove(sp.getUUID());
         }
     }
 

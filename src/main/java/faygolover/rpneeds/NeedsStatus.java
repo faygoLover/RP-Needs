@@ -16,6 +16,12 @@ final class NeedsStatus implements StatusLines.Source {
 
     @Override
     public void lines(Player target, StatusLines.Viewer viewer, List<StatusLines.Line> out) {
+        lines(target, viewer, 0, out);
+    }
+
+    /** Врач (уровень медицины) видит больше признаков недосыпа: круги, зрачки, давность (0.3.0). */
+    @Override
+    public void lines(Player target, StatusLines.Viewer viewer, int medicineLevel, List<StatusLines.Line> out) {
         if (!(target instanceof ServerPlayer sp)) return;
         CompoundTag t = SleepService.data(sp);
         boolean asleep = SleepService.asleep(sp);
@@ -31,8 +37,15 @@ final class NeedsStatus implements StatusLines.Source {
                 if (t.getInt("heavy") > 0) out.add(new StatusLines.Line("rpneeds.status.heavy"));
             }
             case OTHER -> {
-                if (asleep) out.add(new StatusLines.Line("rpneeds.status.other_asleep"));
+                if (asleep) {
+                    out.add(new StatusLines.Line("rpneeds.status.other_asleep"));
+                    return;
+                }
                 if (stage >= 3) out.add(new StatusLines.Line("rpneeds.status.other_exhausted"));
+                else if (stage > 0) out.add(new StatusLines.Line("rpneeds.status.other_stage" + stage));
+                if (stage >= 1 && medicineLevel >= 1) out.add(new StatusLines.Line("rpneeds.status.doc_circles"));
+                if (stage >= 2 && medicineLevel >= 2) out.add(new StatusLines.Line("rpneeds.status.doc_pupils"));
+                if (stage >= 3 && medicineLevel >= 3) out.add(new StatusLines.Line(stage >= 4 ? "rpneeds.status.doc_awake_long" : "rpneeds.status.doc_awake_day"));
             }
             case GM -> {
                 out.add(new StatusLines.Line("rpneeds.status.gm", (int) Math.round(t.getDouble("alert")),

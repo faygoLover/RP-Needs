@@ -45,5 +45,20 @@
   "rpneeds.status.gm_aid": "Sleeping pill in blood: %s%% of a dose",
   "rpneeds.cmd.set_sleep": "Alertness %2$s%% — players: %1$s",
   "rpneeds.cmd.reset": "Needs reset — players: %s",
-  "rpneeds.msg.woke_morning": "You wake up"
+  "rpneeds.msg.woke_morning": "You wake up",
+  "rpneeds.sense.s1.0": "Eyes keep closing",
+  "rpneeds.sense.s1.1": "You keep yawning",
+  "rpneeds.sense.s2.0": "Head feels heavy",
+  "rpneeds.sense.s2.1": "Attention drifts",
+  "rpneeds.sense.s3.0": "Thoughts get tangled",
+  "rpneeds.sense.s3.1": "Eyes close on their own",
+  "rpneeds.sense.rested0": "Well rested",
+  "rpneeds.sense.rested1": "Head is clear",
+  "rpneeds.sense.caffeine_crash": "Heart is racing, yet you want to sleep",
+  "rpneeds.status.other_stage1": "Yawning",
+  "rpneeds.status.other_stage2": "Sluggish, yawning",
+  "rpneeds.status.doc_circles": "Dark circles under the eyes, puffy eyelids",
+  "rpneeds.status.doc_pupils": "Pupils react sluggishly — severe sleep deprivation",
+  "rpneeds.status.doc_awake_day": "Hasn't slept for about a day",
+  "rpneeds.status.doc_awake_long": "Hasn't slept for more than a day"
 }

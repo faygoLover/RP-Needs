@@ -45,5 +45,20 @@
   "rpneeds.status.gm_aid": "Снотворное в крови: %s%% дозы",
   "rpneeds.cmd.set_sleep": "Бодрость %2$s%% — игроков: %1$s",
   "rpneeds.cmd.reset": "Потребности в норме — игроков: %s",
-  "rpneeds.msg.woke_morning": "Вы проснулись"
+  "rpneeds.msg.woke_morning": "Вы проснулись",
+  "rpneeds.sense.s1.0": "Глаза слипаются",
+  "rpneeds.sense.s1.1": "Зевается",
+  "rpneeds.sense.s2.0": "Голова тяжёлая",
+  "rpneeds.sense.s2.1": "Внимание плывёт",
+  "rpneeds.sense.s3.0": "Мысли путаются",
+  "rpneeds.sense.s3.1": "Глаза закрываются сами",
+  "rpneeds.sense.rested0": "Выспался",
+  "rpneeds.sense.rested1": "Голова ясная",
+  "rpneeds.sense.caffeine_crash": "Сердце частит, а спать хочется",
+  "rpneeds.status.other_stage1": "Зевает",
+  "rpneeds.status.other_stage2": "Вялый, зевает",
+  "rpneeds.status.doc_circles": "Тёмные круги под глазами, веки отёкшие",
+  "rpneeds.status.doc_pupils": "Зрачки реагируют вяло — сильный недосып",
+  "rpneeds.status.doc_awake_day": "Не спал около суток",
+  "rpneeds.status.doc_awake_long": "Не спал больше суток"
 }

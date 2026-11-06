@@ -44,6 +44,10 @@ public final class NeedsConfig {
     public static final ForgeConfigSpec.DoubleValue EXPLOSION_RADIUS;
     public static final ForgeConfigSpec.DoubleValue SLEEP_AID_DROP_PER_SECOND;
     public static final ForgeConfigSpec.DoubleValue SLEEP_AID_FLOOR;
+    public static final ForgeConfigSpec.BooleanValue SENSATIONS;
+    public static final ForgeConfigSpec.IntValue REMIND_STAGE1, REMIND_STAGE2, REMIND_STAGE3;
+    public static final ForgeConfigSpec.BooleanValue BLINK, NOD, SPEECH;
+    public static final ForgeConfigSpec.DoubleValue SPEECH_CUT_CHANCE;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -112,6 +116,23 @@ public final class NeedsConfig {
         OFFLINE_REST_SLEEPS = b.comment("Не был в сети столько полных снов в кровати (2 — при сутках 3 ч 30 мин) — при входе выспался.",
                         "Не чаще раза в игровые сутки. Был вне сети, когда проспали ночь, — тоже выспался.")
                 .defineInRange("offline_rest_sleeps", 2.0, 0.0, 100.0);
+        b.pop();
+
+        b.comment("Симптомы сна вместо шкалы (0.3.0): игрок узнаёт о недосыпе по ощущениям, глазам и речи.").push("symptoms");
+        SENSATIONS = b.comment("Ощущения в строке RP Medicine (без неё — в строке действия): при ухудшении сразу, дальше напоминания.")
+                .define("sensations", true);
+        REMIND_STAGE1 = b.comment("Напоминание на стадии «Хочется спать» раз в столько секунд.")
+                .defineInRange("remind_stage1_seconds", 300, 30, 3600);
+        REMIND_STAGE2 = b.comment("…«Клонит в сон».").defineInRange("remind_stage2_seconds", 180, 30, 3600);
+        REMIND_STAGE3 = b.comment("…«Валится с ног».").defineInRange("remind_stage3_seconds", 120, 30, 3600);
+        BLINK = b.comment("Моргание: веки медленно закрываются (с 1-й стадии; со 2-й чаще и лёгкая муть по краям).")
+                .define("blink", true);
+        NOD = b.comment("«Клюёт носом» на 3-й стадии: взгляд плавно опускается и рывком возвращается.")
+                .define("nod", true);
+        SPEECH = b.comment("Обрывы речи «...» на 3-й стадии (чат и голос через фильтр речи RP Core).")
+                .define("speech", true);
+        SPEECH_CUT_CHANCE = b.comment("Шанс оборвать слово (не больше двух обрывов на сообщение).")
+                .defineInRange("speech_cut_chance", 0.08, 0.0, 1.0);
         b.pop();
 
         b.push("caffeine");

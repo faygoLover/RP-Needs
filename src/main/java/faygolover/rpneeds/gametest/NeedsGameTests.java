@@ -463,6 +463,12 @@ public final class NeedsGameTests {
             h.assertTrue(self.stream().anyMatch(l -> l.key().equals("rpneeds.status.stage1")), "сам не чувствует «хочется спать»");
             List<StatusLines.Line> other = StatusLines.collect(p, StatusLines.Viewer.OTHER);
             h.assertTrue(other.stream().noneMatch(l -> l.key().contains("exhausted")), "другие видят лёгкую усталость");
+            h.assertTrue(other.stream().anyMatch(l -> l.key().equals("rpneeds.status.other_stage1")), "другие не видят, что зевает");
+            h.assertTrue(other.stream().noneMatch(l -> l.key().startsWith("rpneeds.status.doc_")), "не врач видит признаки врача");
+            List<StatusLines.Line> doctor = StatusLines.collect(p, StatusLines.Viewer.OTHER, 3);
+            h.assertTrue(doctor.stream().anyMatch(l -> l.key().equals("rpneeds.status.doc_circles")), "врач не видит кругов под глазами");
+            h.assertTrue(faygolover.rpneeds.SleepService.filterSpeech(p, "раз два три", faygolover.rpcore.api.RpCoreAPI.SpeechChannel.values()[0])
+                    .equals("раз два три"), "речь на 1-й стадии не должна рваться");
         } finally {
             remove(h, p);
         }
