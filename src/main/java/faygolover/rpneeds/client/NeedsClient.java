@@ -56,7 +56,7 @@ public final class NeedsClient {
         blinkOn = blink;
         nodOn = nod;
         nextBlink = System.currentTimeMillis() + blinkGap();
-        nodIn = stage == 3 && nodOn ? 20 * (30 + RND.nextInt(30)) : -1;
+        nodIn = stage >= 3 && nodOn ? 20 * (30 + RND.nextInt(30)) : -1;
         nodLeft = 0;
         nodAdded = 0;
     }
@@ -84,7 +84,7 @@ public final class NeedsClient {
     /** Клюёт носом: ~1,5 с взгляд плавно уходит вниз (до 25°), потом рывком назад; раз в 50–80 с. */
     private static void nod(Minecraft mc) {
         var p = mc.player;
-        if (p == null || stage != 3 || !nodOn || mc.isPaused() || p.isSleeping()) return;
+        if (p == null || stage < 3 || !nodOn || mc.isPaused() || p.isSleeping()) return;
         if (nodLeft > 0) {
             float step = 25f / 30f;
             p.setXRot(Math.min(90f, p.getXRot() + step));
@@ -119,7 +119,7 @@ public final class NeedsClient {
     /** Веки и муть по краям. */
     private static void eyes(RenderGuiEvent.Post e) {
         var mc = Minecraft.getInstance();
-        if (stage < 1 || stage > 3 || !blinkOn || mc.player == null || mc.player.isSleeping()) return;
+        if (stage < 1 || !blinkOn || mc.player == null || mc.player.isSleeping()) return;
         int w = e.getWindow().getGuiScaledWidth(), h = e.getWindow().getGuiScaledHeight();
         var g = e.getGuiGraphics();
         // Со 2-й стадии — лёгкая муть по краям.

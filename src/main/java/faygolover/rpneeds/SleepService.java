@@ -209,13 +209,17 @@ public final class SleepService {
         if (sp.tickCount % 20 != 0) return;
         if (!counts(sp)) {
             slow(sp, SLOW, 0);
+            sendStage(sp, 0);
             // Творческий: потребности не идут, но в кровати засыпает сразу и спит, пока не встанет.
             if (sp.isCreative() && sp.isSleeping() && !t.getBoolean("asleep")) setBedAsleep(sp, t, true);
             if (!sp.isSleeping() && t.getBoolean("asleep")) setBedAsleep(sp, t, false);
             return;
         }
         timers(sp, t);
-        if (!RpCoreAPI.timeRunning()) return;
+        if (!RpCoreAPI.timeRunning()) {
+            sendStage(sp, asleep(sp) ? 0 : stage(sp, t));
+            return;
+        }
         double day = day();
 
         // Кровать: лёг — не значит уснул.
@@ -390,10 +394,12 @@ public final class SleepService {
     private static final java.util.Map<UUID, Integer> SENT_STAGE = new java.util.HashMap<>();
 
     private static void sendStage(ServerPlayer sp, int stage) {
+        boolean blink = NeedsConfig.BLINK.get(), nod = NeedsConfig.NOD.get();
+        int key = stage | (blink ? 8 : 0) | (nod ? 16 : 0);
         Integer sent = SENT_STAGE.get(sp.getUUID());
-        if (sent != null && sent == stage) return;
-        SENT_STAGE.put(sp.getUUID(), stage);
-        NeedsNetwork.send(sp, new NeedsNetwork.Stage(stage, NeedsConfig.BLINK.get(), NeedsConfig.NOD.get()));
+        if (sent != null && sent == key) return;
+        SENT_STAGE.put(sp.getUUID(), key);
+        NeedsNetwork.send(sp, new NeedsNetwork.Stage(stage, blink, nod));
     }
 
     private static int remindSeconds(int stage) {
@@ -417,15 +423,16 @@ public final class SleepService {
         sp.displayClientMessage(Component.translatable(key).withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC), true);
     }
 
-    /** Речь на стадии «Валится с ног»: редкие обрывы «...» (фильтр речи RP Core — чат и голос). */
+    /** Речь со стадии «Валится с ног»: редкие обрывы «...» (фильтр речи RP Core, только речь рядом, текстом). Зовётся и не с главного потока. */
     public static String filterSpeech(ServerPlayer sp, String text, RpCoreAPI.SpeechChannel channel) {
-        if (!NeedsConfig.SPEECH.get() || !counts(sp) || stage(sp, data(sp)) != 3 || text.isEmpty()) return text;
+        if (channel != RpCoreAPI.SpeechChannel.VOICE_NEARBY || !NeedsConfig.SPEECH.get() || !counts(sp) || stage(sp, data(sp)) < 3 || text.isEmpty()) return text;
         String[] words = text.split(" ", -1);
         double p = NeedsConfig.SPEECH_CUT_CHANCE.get();
         int cuts = 0;
         for (int i = 1; i < words.length && cuts < 2; i++) {
             String w = words[i];
-            if (w.length() < 4 || sp.getRandom().nextDouble() >= p) continue;
+            if (w.length() < 4 || !w.chars().allMatch(ch -> Character.isLetter(ch) || ".,!?-".indexOf(ch) >= 0)
+                    || java.util.concurrent.ThreadLocalRandom.current().nextDouble() >= p) continue;
             words[i] = w.substring(0, Math.max(2, w.length() / 2)) + "...";
             cuts++;
         }
@@ -517,7 +524,8 @@ public final class SleepService {
     public static void onSkip(RpTimeSkipEvent e) {
         if (!(e.getEntity() instanceof ServerPlayer sp) || !counts(sp) || e.scope() != RpTimeSkipEvent.Scope.ALL) return;
         CompoundTag t = data(sp);
-        double day = day(), secs = e.seconds();
+        // Секунды события посчитаны по длине суток без /time speed — и доли суток считаем так же.
+        double day = Math.max(60, RpCoreAPI.dayLengthSeconds()), secs = e.seconds();
         if (e.sleeping()) {
             // Место сна (кровать, спальник, поза) и качество от команды (усадили спать — ×0,8).
             int place = place(sp);
