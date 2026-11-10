@@ -60,6 +60,7 @@ public final class RpNeeds {
         bus.addListener(EventPriority.NORMAL, false, RpTimeSkipEvent.class, SleepService::onSkip);
         bus.addListener(EventPriority.NORMAL, false, RpTimeSkipOfflineEvent.class, SleepService::onSkipOffline);
         bus.addListener(RpNeeds::onCommands);
+        bus.addListener(EventPriority.NORMAL, false, faygolover.rpcore.api.event.RpCharacterWipeEvent.class, SleepService::onWipe);
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> faygolover.rpneeds.client.NeedsClient::init);
     }
 
@@ -69,6 +70,17 @@ public final class RpNeeds {
             StatusLines.register(NeedsStatus.INSTANCE);
             RpCoreAPI.registerSpeechFilter(new net.minecraft.resources.ResourceLocation(MODID, "drowsy"), SleepService::filterSpeech);
             RpCoreAPI.registerModule(MODID, "потребности: сон");
+            RpCoreAPI.registerSleep(new faygolover.rpcore.api.SleepProvider() {
+                @Override
+                public boolean asleep(net.minecraft.world.entity.player.Player p) {
+                    return p instanceof net.minecraft.server.level.ServerPlayer sp && SleepService.asleep(sp);
+                }
+
+                @Override
+                public int stage(net.minecraft.world.entity.player.Player p) {
+                    return p instanceof net.minecraft.server.level.ServerPlayer sp && SleepService.counts(sp) ? SleepService.stage(sp, SleepService.data(sp)) : 0;
+                }
+            });
             if (ModList.get().isLoaded("tacz")) faygolover.rpneeds.integration.TaczShots.register();
         });
     }

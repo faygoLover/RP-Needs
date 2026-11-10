@@ -30,6 +30,21 @@ public final class NeedsConfig {
     public static final ForgeConfigSpec.DoubleValue CAFFEINE_BOOST;
     public static final ForgeConfigSpec.DoubleValue CAFFEINE_CRASH;
     public static final ForgeConfigSpec.DoubleValue CAFFEINE_SHARE;
+    public static final ForgeConfigSpec.DoubleValue STAGE2_MAX_STAMINA;
+    public static final ForgeConfigSpec.DoubleValue STAGE3_MAX_STAMINA;
+    public static final ForgeConfigSpec.DoubleValue STRESS_NO_SLEEP;
+    public static final ForgeConfigSpec.DoubleValue STRESS_SLOW_FROM;
+    public static final ForgeConfigSpec.DoubleValue STRESS_SLEEP_MULT;
+    public static final ForgeConfigSpec.DoubleValue LOW_SANITY;
+    public static final ForgeConfigSpec.DoubleValue LOW_SANITY_FAIL;
+    public static final ForgeConfigSpec.DoubleValue DRUNK_FROM;
+    public static final ForgeConfigSpec.DoubleValue DRUNK_EASIER;
+    public static final ForgeConfigSpec.DoubleValue DRUNK_SLEEP_MULT;
+    public static final ForgeConfigSpec.DoubleValue TEMP_MILD;
+    public static final ForgeConfigSpec.DoubleValue TEMP_DANGER;
+    public static final ForgeConfigSpec.DoubleValue TEMP_BED_FORGIVES;
+    public static final ForgeConfigSpec.DoubleValue TEMP_SLEEP_MULT;
+    public static final ForgeConfigSpec.DoubleValue TEMP_NIGHTMARE_MULT;
     public static final ForgeConfigSpec.DoubleValue CAFFEINE_DRAIN_MULT;
     public static final ForgeConfigSpec.DoubleValue OFFLINE_REST_SLEEPS;
     public static final ForgeConfigSpec.DoubleValue SEAT_MULT;
@@ -144,6 +159,38 @@ public final class NeedsConfig {
                 .defineInRange("duration_share", 1.0 / 8.0, 0.0, 10.0);
         CAFFEINE_DRAIN_MULT = b.comment("Пока кофеин действует, бодрость тратится медленнее: множитель. Уснуть нельзя, пока бодрость выше 0.")
                 .defineInRange("drain_mult", 0.5, 0.0, 2.0);
+        b.pop();
+        b.comment("Что мешает спать и что даёт недосып").push("body_and_mood");
+        STAGE2_MAX_STAMINA = b.comment("Сонливость: максимум выносливости минус столько (доля).")
+                .defineInRange("stage2_max_stamina", 0.10, 0.0, 0.9);
+        STAGE3_MAX_STAMINA = b.comment("Валится с ног и дальше: максимум выносливости минус столько (доля).")
+                .defineInRange("stage3_max_stamina", 0.20, 0.0, 0.9);
+        STRESS_NO_SLEEP = b.comment("Со стресса от этого значения без седации не уснуть.")
+                .defineInRange("stress_no_sleep", 70.0, 0.0, 101.0);
+        STRESS_SLOW_FROM = b.comment("Со стресса от этого значения сон идёт медленнее.")
+                .defineInRange("stress_slow_from", 50.0, 0.0, 101.0);
+        STRESS_SLEEP_MULT = b.comment("Скорость сна при таком стрессе: множитель.")
+                .defineInRange("stress_sleep_mult", 0.8, 0.0, 1.0);
+        LOW_SANITY = b.comment("Рассудок ниже этого — бессонница.")
+                .defineInRange("low_sanity", 20.0, 0.0, 100.0);
+        LOW_SANITY_FAIL = b.comment("Доля попыток уснуть, которые при этом не выходят.")
+                .defineInRange("low_sanity_fail", 0.3, 0.0, 1.0);
+        DRUNK_FROM = b.comment("Опьянение от этого значения (0–100): засыпает легче, спит хуже.")
+                .defineInRange("drunk_from", 30.0, 0.0, 100.0);
+        DRUNK_EASIER = b.comment("Пьяному порог бодрости, ниже которого можно уснуть, выше на столько.")
+                .defineInRange("drunk_easier", 25.0, 0.0, 100.0);
+        DRUNK_SLEEP_MULT = b.comment("Скорость сна пьяного: множитель. «Выспался» при этом не будет.")
+                .defineInRange("drunk_sleep_mult", 0.7, 0.0, 1.0);
+        TEMP_MILD = b.comment("Температура LSO вне нормы на столько единиц — умеренный холод или жара.")
+                .defineInRange("temp_mild", 1.0, 0.0, 40.0);
+        TEMP_DANGER = b.comment("Вне нормы на столько — опасно: уснуть нельзя, спящего будит.")
+                .defineInRange("temp_danger", 8.5, 0.0, 40.0);
+        TEMP_BED_FORGIVES = b.comment("Кровать, спальник и койка прощают холод меньше стольких единиц.")
+                .defineInRange("temp_bed_forgives", 4.0, 0.0, 40.0);
+        TEMP_SLEEP_MULT = b.comment("Скорость сна при умеренном холоде или жаре: множитель.")
+                .defineInRange("temp_sleep_mult", 0.7, 0.0, 1.0);
+        TEMP_NIGHTMARE_MULT = b.comment("Кошмары при умеренном холоде или жаре: множитель.")
+                .defineInRange("temp_nightmare_mult", 2.0, 0.0, 10.0);
         b.pop();
         SPEC = b.build();
     }

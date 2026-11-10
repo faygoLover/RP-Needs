@@ -56,6 +56,7 @@ public final class SleepService {
     public static final TagKey<Block> SLEEPING_BAGS = BlockTags.create(new ResourceLocation(RpNeeds.MODID, "sleeping_bags"));
     private static final UUID SLOW = UUID.fromString("3b1e9f0a-7c52-4d8e-a1f6-2e9b5c7d4a10");
     private static final UUID HEAVY = UUID.fromString("5a2c8e41-9b07-4f3d-8c6e-1d4f7a9b3e22");
+    private static final UUID MAX_STAMINA = UUID.fromString("8e7d4c12-3f6a-4b59-a0d7-6c1e9f2b5d33");
 
     // ------------------------------------------------------------------ черты (RP Perks: rpneeds:<id>)
 
@@ -178,12 +179,16 @@ public final class SleepService {
 
     /** Почему нельзя уснуть (ключ перевода) или null — можно. Без случайности (Бессонница — отдельно). */
     static String noSleepReason(ServerPlayer sp, CompoundTag t) {
+        if (temperatureLevel(sp, place(sp)) >= 2) return cold(sp) ? "rpneeds.msg.too_cold" : "rpneeds.msg.too_hot";
         if (sleepAid(sp) > 0) return null;
         if (t.getInt("cooldown") > 0) return "rpneeds.msg.just_woke";
         if (t.getDouble("cafLeft") > 0 && t.getDouble("alert") > 0) return "rpneeds.msg.caffeine";
         BodyProvider b = RpCoreAPI.body();
+        if (b != null && b.stimulated(sp) && t.getDouble("alert") > 0) return "rpneeds.msg.stimulant";
+        if (RpCoreAPI.stress(sp) >= NeedsConfig.STRESS_NO_SLEEP.get() && (b == null || b.sedation(sp) < 20)) return "rpneeds.msg.stress";
         if (b != null && b.pain(sp) > NeedsConfig.PAIN_NO_SLEEP.get() && b.sedation(sp) < 20) return "rpneeds.msg.pain";
         double limit = night(sp) ? NeedsConfig.NIGHT_SLEEP_BELOW.get() : NeedsConfig.DAY_SLEEP_BELOW.get();
+        if (drunk(sp)) limit += NeedsConfig.DRUNK_EASIER.get();
         if (t.getDouble("alert") >= limit) return "rpneeds.msg.not_sleepy";
         return null;
     }
@@ -194,9 +199,41 @@ public final class SleepService {
         return t >= 12500 && t < 23500;
     }
 
-    /** Бессонница: 30 % попыток уснуть не выходят. */
+    /** Бессонница (черта или рассудок на исходе): 30 % попыток уснуть не выходят. */
     static boolean insomniaFails(ServerPlayer sp) {
-        return sleepAid(sp) <= 0 && has(sp, INSOMNIA) && sp.getRandom().nextDouble() < 0.3;
+        if (sleepAid(sp) > 0) return false;
+        double p = has(sp, INSOMNIA) ? 0.3 : 0;
+        if (RpCoreAPI.sanity(sp) < NeedsConfig.LOW_SANITY.get()) p = Math.max(p, NeedsConfig.LOW_SANITY_FAIL.get());
+        return p > 0 && sp.getRandom().nextDouble() < p;
+    }
+
+    static boolean drunk(ServerPlayer sp) {
+        BodyProvider b = RpCoreAPI.body();
+        return b != null && b.intoxication(sp) >= NeedsConfig.DRUNK_FROM.get();
+    }
+
+    private static boolean cold(ServerPlayer sp) {
+        BodyProvider b = RpCoreAPI.body();
+        return b != null && b.temperatureOffset(sp) < 0;
+    }
+
+    /** Температура для сна: 0 терпимо, 1 умеренный холод или жара, 2 опасно. Кровать, спальник и койка прощают небольшой холод. */
+    static int temperatureLevel(ServerPlayer sp, int place) {
+        BodyProvider b = RpCoreAPI.body();
+        if (b == null) return 0;
+        double off = b.temperatureOffset(sp);
+        if (off < 0 && place >= 0 && place <= 2 && -off < NeedsConfig.TEMP_BED_FORGIVES.get()) return 0;
+        double a = Math.abs(off);
+        return a >= NeedsConfig.TEMP_DANGER.get() ? 2 : a >= NeedsConfig.TEMP_MILD.get() ? 1 : 0;
+    }
+
+    /** Что замедляет сон, кроме места: стресс, хмель, холод или жара. */
+    private static double conditionMult(ServerPlayer sp, int place) {
+        double m = 1;
+        if (RpCoreAPI.stress(sp) >= NeedsConfig.STRESS_SLOW_FROM.get()) m *= NeedsConfig.STRESS_SLEEP_MULT.get();
+        if (drunk(sp)) m *= NeedsConfig.DRUNK_SLEEP_MULT.get();
+        if (temperatureLevel(sp, place) == 1) m *= NeedsConfig.TEMP_SLEEP_MULT.get();
+        return m;
     }
 
     // ------------------------------------------------------------------ тик
@@ -209,6 +246,7 @@ public final class SleepService {
         if (sp.tickCount % 20 != 0) return;
         if (!counts(sp)) {
             slow(sp, SLOW, 0);
+            maxStamina(sp, 0);
             sendStage(sp, 0);
             // Творческий: потребности не идут, но в кровати засыпает сразу и спит, пока не встанет.
             if (sp.isCreative() && sp.isSleeping() && !t.getBoolean("asleep")) setBedAsleep(sp, t, true);
@@ -226,7 +264,19 @@ public final class SleepService {
         if (sp.isSleeping() && !t.getBoolean("asleep")) tryFallAsleepInBed(sp, t);
         if (!sp.isSleeping() && t.getBoolean("asleep")) setBedAsleep(sp, t, false);
 
+        // Без сознания и под наркозом: не устаёт, бодрость понемногу возвращается, как сон на полу; недосыпа не видно.
+        if (RpCoreAPI.unconscious(sp)) {
+            change(t, 100.0 / (NeedsConfig.FULL_SLEEP_SHARE.get() * day) * NeedsConfig.POSTURE_MULT.get());
+            caffeineTick(sp, t, 1);
+            sendStage(sp, 0);
+            return;
+        }
+
         boolean asleep = asleep(sp);
+        if (asleep && temperatureLevel(sp, place(sp)) >= 2) {
+            wake(sp, cold(sp) ? "rpneeds.msg.woke_cold" : "rpneeds.msg.woke_heat", false);
+            asleep = false;
+        }
         if (asleep) {
             int place = place(sp);
             double rate = 100.0 / (NeedsConfig.FULL_SLEEP_SHARE.get() * day) * placeMult(sp, place);
@@ -234,14 +284,18 @@ public final class SleepService {
             if (has(sp, INSOMNIA)) rate *= 0.7;
             NutritionProvider n = RpCoreAPI.nutrition();
             if (n != null && (n.hungerStage(sp) >= 2 || n.thirstStage(sp) >= 2)) rate *= NeedsConfig.HUNGRY_SLEEP_MULT.get();
+            rate *= conditionMult(sp, place);
+            if (drunk(sp)) t.putBoolean("drunkSleep", true);
             change(t, rate);
             t.putInt("place", place);
             t.putInt("slept", t.getInt("slept") + 1);
             Wakers.asleepTick(sp, t, place);
             if (t.getDouble("alert") >= 100 && t.getDouble("debt") <= 0) {
-                t.putInt("rested", (int) (day / 6));
+                // После пьянки просыпается, но не «выспался».
+                boolean drunkSleep = t.getBoolean("drunkSleep");
+                if (!drunkSleep) t.putInt("rested", (int) (day / 6));
                 wake(sp, null, false);
-                sense(sp, "rpneeds.sense.rested" + sp.getRandom().nextInt(2));
+                if (!drunkSleep) sense(sp, "rpneeds.sense.rested" + sp.getRandom().nextInt(2));
             }
         } else {
             double mult = RpCoreAPI.posture(sp) != Posture.NONE || sp.isSleeping() ? NeedsConfig.RESTING_DRAIN_MULT.get() : 1.0;
@@ -324,8 +378,10 @@ public final class SleepService {
         t.putInt("retry", 0);
         // Психике — сколько проспал в нормальном месте (доля полного сна): снимает стресс, возвращает рассудок.
         int slept = t.getInt("slept"), place = t.getInt("place");
+        boolean drunkSleep = t.getBoolean("drunkSleep");
+        t.remove("drunkSleep");
         t.putInt("slept", 0);
-        if (slept > 0 && (place == 0 || place == 2 || has(sp, UNFUSSY))) {
+        if (slept > 0 && !drunkSleep && (place == 0 || place == 2 || has(sp, UNFUSSY))) {
             double full = NeedsConfig.FULL_SLEEP_SHARE.get() * day();
             MinecraftForge.EVENT_BUS.post(new RpMoodEvent(sp, RpMoodEvent.Kind.RESTED, Math.min(1, slept / full)));
         }
@@ -373,6 +429,7 @@ public final class SleepService {
         }
         sendStage(sp, asleep(sp) ? 0 : stage);
         slow(sp, SLOW, stage == 2 ? NeedsConfig.DROWSY_SPEED.get() : stage >= 3 ? NeedsConfig.STAGGER_SPEED.get() : 0);
+        maxStamina(sp, stage == 2 ? NeedsConfig.STAGE2_MAX_STAMINA.get() : stage >= 3 ? NeedsConfig.STAGE3_MAX_STAMINA.get() : 0);
         if (asleep(sp) || sp.isSleeping()) return;
         if (stage == 3) {
             int left = t.getInt("micro");
@@ -446,6 +503,17 @@ public final class SleepService {
         if (m != null && Math.abs(m.getAmount() + amount) < 1e-6) return;
         a.removeModifier(id);
         if (amount > 0) a.addTransientModifier(new AttributeModifier(id, "rpneeds sleep", -amount, AttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+
+    /** Недосып: максимум выносливости меньше на долю {@code amount} (0 — снять). */
+    static void maxStamina(ServerPlayer sp, double amount) {
+        var attribute = RpCoreAPI.staminaAttribute(faygolover.rpcore.api.StaminaProvider.Stat.MAX);
+        AttributeInstance a = attribute == null ? null : sp.getAttribute(attribute);
+        if (a == null) return;
+        AttributeModifier m = a.getModifier(MAX_STAMINA);
+        if (m != null && Math.abs(m.getAmount() + amount) < 1e-6) return;
+        a.removeModifier(MAX_STAMINA);
+        if (amount > 0) a.addTransientModifier(new AttributeModifier(MAX_STAMINA, "rpneeds sleep debt", -amount, AttributeModifier.Operation.MULTIPLY_TOTAL));
     }
 
     // ------------------------------------------------------------------ события сна
@@ -529,7 +597,7 @@ public final class SleepService {
         if (e.sleeping()) {
             // Место сна (кровать, спальник, поза) и качество от команды (усадили спать — ×0,8).
             int place = place(sp);
-            double mult = placeMult(sp, place < 0 ? 5 : place) * e.quality();
+            double mult = placeMult(sp, place < 0 ? 5 : place) * e.quality() * conditionMult(sp, place < 0 ? 5 : place);
             if (has(sp, SHORT)) mult *= 1.5;
             if (has(sp, INSOMNIA)) mult *= 0.7;
             change(t, 100.0 / (NeedsConfig.FULL_SLEEP_SHARE.get() * day) * secs * mult);
@@ -587,6 +655,16 @@ public final class SleepService {
             t.putInt("rested", (int) (day() / 6));
             if (longAway) t.putLong("restDay", gameDay + 1);
         }
+    }
+
+    /** Вайп персонажа: бодрость как у нового. */
+    public static void onWipe(faygolover.rpcore.api.event.RpCharacterWipeEvent e) {
+        if (!(e.getEntity() instanceof ServerPlayer sp)) return;
+        sp.getPersistentData().remove(TAG);
+        slow(sp, SLOW, 0);
+        slow(sp, HEAVY, 0);
+        maxStamina(sp, 0);
+        SENT_STAGE.remove(sp.getUUID());
     }
 
     /** После смерти данные сна остаются (без сна и таймеров). */

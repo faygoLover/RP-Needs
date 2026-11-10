@@ -60,5 +60,11 @@
   "rpneeds.status.doc_circles": "Тёмные круги под глазами, веки отёкшие",
   "rpneeds.status.doc_pupils": "Зрачки реагируют вяло — сильный недосып",
   "rpneeds.status.doc_awake_day": "Не спал около суток",
-  "rpneeds.status.doc_awake_long": "Не спал больше суток"
+  "rpneeds.status.doc_awake_long": "Не спал больше суток",
+  "rpneeds.msg.stress": "Слишком неспокойно, чтобы уснуть",
+  "rpneeds.msg.stimulant": "Сердце колотится, сон не идёт",
+  "rpneeds.msg.too_cold": "Слишком холодно, чтобы уснуть",
+  "rpneeds.msg.too_hot": "Слишком жарко, чтобы уснуть",
+  "rpneeds.msg.woke_cold": "Вы проснулись от холода",
+  "rpneeds.msg.woke_heat": "Вы проснулись от жары"
 }

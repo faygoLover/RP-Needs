@@ -60,5 +60,11 @@
   "rpneeds.status.doc_circles": "Dark circles under the eyes, puffy eyelids",
   "rpneeds.status.doc_pupils": "Pupils react sluggishly — severe sleep deprivation",
   "rpneeds.status.doc_awake_day": "Hasn't slept for about a day",
-  "rpneeds.status.doc_awake_long": "Hasn't slept for more than a day"
+  "rpneeds.status.doc_awake_long": "Hasn't slept for more than a day",
+  "rpneeds.msg.stress": "Too restless to sleep",
+  "rpneeds.msg.stimulant": "Your heart is pounding, sleep will not come",
+  "rpneeds.msg.too_cold": "Too cold to sleep",
+  "rpneeds.msg.too_hot": "Too hot to sleep",
+  "rpneeds.msg.woke_cold": "You woke up from the cold",
+  "rpneeds.msg.woke_heat": "You woke up from the heat"
 }
