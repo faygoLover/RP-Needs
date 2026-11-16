@@ -53,6 +53,22 @@ public final class SleepService {
     private SleepService() {}
 
     static final String TAG = "rpneeds";
+    /**
+     * Раздел данных сна в {@code getPersistentData()} игрока; перенос при возрождении ведёт RP Core. После смерти и
+     * возврата из Края данные остаются, но без сна и таймера «валится с ног».
+     */
+    static faygolover.rpcore.api.data.PersistentTag STORE;
+
+    /** Описать раздел для RP Core. Вызывается из конструктора мода. */
+    public static void registerData() {
+        STORE = faygolover.rpcore.api.data.PersistentTag.of(TAG)
+                .clone((t, ctx) -> {
+                    t.putBoolean("asleep", false);
+                    t.putInt("heavy", 0);
+                    return t;
+                })
+                .register();
+    }
     public static final TagKey<Block> SLEEPING_BAGS = BlockTags.create(new ResourceLocation(RpNeeds.MODID, "sleeping_bags"));
     private static final UUID SLOW = UUID.fromString("3b1e9f0a-7c52-4d8e-a1f6-2e9b5c7d4a10");
     private static final UUID HEAVY = UUID.fromString("5a2c8e41-9b07-4f3d-8c6e-1d4f7a9b3e22");
@@ -665,16 +681,6 @@ public final class SleepService {
         slow(sp, HEAVY, 0);
         maxStamina(sp, 0);
         SENT_STAGE.remove(sp.getUUID());
-    }
-
-    /** После смерти данные сна остаются (без сна и таймеров). */
-    public static void onClone(PlayerEvent.Clone e) {
-        CompoundTag old = e.getOriginal().getPersistentData();
-        if (!old.contains(TAG)) return;
-        CompoundTag t = old.getCompound(TAG).copy();
-        t.putBoolean("asleep", false);
-        t.putInt("heavy", 0);
-        e.getEntity().getPersistentData().put(TAG, t);
     }
 
     static void snore(ServerPlayer sp) {

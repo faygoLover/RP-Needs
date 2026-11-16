@@ -1,18 +1,18 @@
 # RP Needs — указатель кода
 
-Создано `python _family/tools/mapgen.py` 15.11.2026, версия 0.4.0-1.20.1-forge, коммит `ad1bd8e`.
+Создано `python _family/tools/mapgen.py`, версия мода 0.4.1-1.20.1-forge.
 **Руками не править**: пересоздаётся скриптом. Смысл, потоки работы и рецепты — в `docs/MAP.md`.
 Разбор по шаблонам, без компиляции: необычно оформленная регистрация может отсутствовать в списках.
 
-Всего: 12 файлов, 2046 строк Java.
+Всего: 13 файлов, 2152 строк Java.
 
 ## 1. Пакеты
 
 | Пакет | Файлов | Строк |
 |---|---:|---:|
-| `faygolover.rpneeds` | 8 | 1323 |
+| `faygolover.rpneeds` | 8 | 1329 |
 | `faygolover.rpneeds.client` | 1 | 146 |
-| `faygolover.rpneeds.gametest` | 1 | 524 |
+| `faygolover.rpneeds.gametest` | 2 | 624 |
 | `faygolover.rpneeds.integration` | 2 | 53 |
 
 ## 2. Классы
@@ -23,7 +23,7 @@
 - `NeedsStatus`, 63 — Строки сна для RP Medicine: сам игрок — ощущениями в своих состояниях, другие при осмотре — только сильную усталость и сон, ГМ сканером и в панели — цифры.
 - `NightMark`, 36 — Когда в последний раз проспали ночь (реальное время, мс): вышедшие до этого при входе выспались.
 - `RpNeeds`, 123 — RP Needs — потребности: сон (0.2.0, дизайн «RP Needs: сон»), дальше чистота (план docs/00_plan.md).
-- `SleepService`, 684 — Сон (сервер), дизайн «RP Needs: сон» 29–30.10.
+- `SleepService`, 690 — Сон (сервер), дизайн «RP Needs: сон» 29–30.10.
 - `VoiceDistance`, 38 — Simple Voice Distance (необязательный): режим дальности игрока на сервере.
 - `Wakers`, 90 — Что будит спящего, кроме удара и Shift: кошмары, храп соседа, голос, выстрелы (взрывы и будильник — в SleepService).
 
@@ -31,13 +31,14 @@
 - `NeedsClient`, 146 — Клиент: микросон (экран гаснет на миг), кровать без сна (лёг, но не уснул — экран не темнеет) и 1-е лицо, когда лёг в кровать или по /lay: от 3-го лица лежачий виден криво (тест 03.11); вернуть вид игрок может сам.
 
 ### `faygolover.rpneeds.gametest`
+- `NeedsEdgeTests`, 100 — Края состояния сна: смерть, возврат из Края, перезаход.
 - `NeedsGameTests`, 524 — Сон, время и питание вместе с семьёй RP в настоящем сервере (без клиента).
 
 ### `faygolover.rpneeds.integration`
 - `NeedsVoicePlugin`, 30 — Плагин Simple Voice Chat: кто говорит и шёпотом ли — спящих рядом будит голос.
 - `TaczShots`, 23 — TaCZ (необязательный): выстрел рядом будит спящих.
 
-Классов без описания: 0 из 12.
+Классов без описания: 0 из 13.
 
 ## 3. Подписки на события
 
@@ -48,7 +49,6 @@
 | `GunShootEvent` | `TaczShots.onShoot` |
 | `LivingHurtEvent` | `SleepService.onHurt` |
 | `MicrophonePacketEvent` | `NeedsVoicePlugin.onMicrophone` |
-| `PlayerEvent.Clone` | `SleepService.onClone` |
 | `PlayerEvent.PlayerLoggedInEvent` | `SleepService.onLogin` |
 | `PlayerEvent.PlayerLoggedOutEvent` | `SleepService.onLogout` |
 | `RegisterCommandsEvent` | `RpNeeds.onCommands` |
@@ -82,7 +82,8 @@
 ## 6. Данные
 
 - SavedData: `NightMark`, файл "rpneeds_night"
-- getPersistentData: `SleepService` ×5, теги: `rpneeds`
+- getPersistentData: `SleepService` ×4, теги: `rpneeds`
+- getPersistentData: `NeedsEdgeTests` ×9, теги: `rpneeds`
 
 ## 7. Конфиги
 

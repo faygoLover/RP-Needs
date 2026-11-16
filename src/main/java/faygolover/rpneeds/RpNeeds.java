@@ -51,7 +51,7 @@ public final class RpNeeds {
         bus.addListener(SleepService::onExplosion);
         bus.addListener(SleepService::onLogin);
         bus.addListener(SleepService::onLogout);
-        bus.addListener(SleepService::onClone);
+        SleepService.registerData();
         bus.addListener(EventPriority.NORMAL, false, RpPostureSleepEvent.class, SleepService::onPostureSleep);
         bus.addListener(EventPriority.NORMAL, false, RpPostureWakeEvent.class, SleepService::onPostureWake);
         bus.addListener(EventPriority.LOW, false, RpSleepCountEvent.class, SleepService::onSleepCount);
