@@ -33,9 +33,9 @@ public final class Wakers {
         if (per > 0) {
             double full = NeedsConfig.FULL_SLEEP_SHARE.get() * SleepService.day();
             double sanity = Math.max(0, Math.min(100, RpCoreAPI.sanity(sp)));
-            double p = 1.0 / (per * full) * SleepService.nightmarePlace(sp, place) * (1 + 2 * (1 - sanity / 100.0));
+            double p = 1.0 / (per * full) * SleepPlace.nightmarePlace(sp, place) * (1 + 2 * (1 - sanity / 100.0));
             if (SleepService.has(sp, SleepService.NIGHTMARES)) p *= 2;
-            if (SleepService.temperatureLevel(sp, place) == 1) p *= NeedsConfig.TEMP_NIGHTMARE_MULT.get();
+            if (SleepPlace.temperatureLevel(sp, place) == 1) p *= NeedsConfig.TEMP_NIGHTMARE_MULT.get();
             if (sp.getRandom().nextDouble() < p) {
                 t.putInt("nightmare", 120);
                 SleepService.wake(sp, "rpneeds.msg.nightmare", false);

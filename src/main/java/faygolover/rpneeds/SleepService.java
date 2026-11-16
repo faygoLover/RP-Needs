@@ -1,24 +1,16 @@
 package faygolover.rpneeds;
 
+import static faygolover.rpneeds.SleepPlace.*;
 import faygolover.rpcore.api.BodyProvider;
-import faygolover.rpcore.api.Consumables;
 import faygolover.rpcore.api.NutritionProvider;
 import faygolover.rpcore.api.RpCoreAPI;
 import faygolover.rpcore.api.RpCoreAPI.Posture;
 import faygolover.rpcore.api.RpIds;
-import faygolover.rpcore.api.event.RpAlarmEvent;
-import faygolover.rpcore.api.event.RpConsumeEvent;
 import faygolover.rpcore.api.event.RpMoodEvent;
-import faygolover.rpcore.api.event.RpPostureSleepEvent;
 import faygolover.rpcore.api.event.RpPostureWakeEvent;
-import faygolover.rpcore.api.event.RpSleepCountEvent;
-import faygolover.rpcore.api.event.RpTimeSkipEvent;
-import faygolover.rpcore.api.event.RpTimeSkipOfflineEvent;
-import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -29,14 +21,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.entity.player.SleepingTimeCheckEvent;
-import net.minecraftforge.event.level.ExplosionEvent;
-import net.minecraftforge.eventbus.api.Event;
 
 import java.util.UUID;
 
@@ -70,9 +56,9 @@ public final class SleepService {
                 .register();
     }
     public static final TagKey<Block> SLEEPING_BAGS = BlockTags.create(new ResourceLocation(RpNeeds.MODID, "sleeping_bags"));
-    private static final UUID SLOW = UUID.fromString("3b1e9f0a-7c52-4d8e-a1f6-2e9b5c7d4a10");
-    private static final UUID HEAVY = UUID.fromString("5a2c8e41-9b07-4f3d-8c6e-1d4f7a9b3e22");
-    private static final UUID MAX_STAMINA = UUID.fromString("8e7d4c12-3f6a-4b59-a0d7-6c1e9f2b5d33");
+    static final UUID SLOW = UUID.fromString("3b1e9f0a-7c52-4d8e-a1f6-2e9b5c7d4a10");
+    static final UUID HEAVY = UUID.fromString("5a2c8e41-9b07-4f3d-8c6e-1d4f7a9b3e22");
+    static final UUID MAX_STAMINA = UUID.fromString("8e7d4c12-3f6a-4b59-a0d7-6c1e9f2b5d33");
 
     // ------------------------------------------------------------------ черты (RP Perks: rpneeds:<id>)
 
@@ -81,7 +67,7 @@ public final class SleepService {
             INSOMNIA = trait("insomnia"), LIGHT = trait("light_sleeper"), SLEEPYHEAD = trait("sleepyhead"),
             NIGHTMARES = trait("nightmares"), HEAVY_WAKING = trait("heavy_waking"), SNORER = trait("snorer");
 
-    private static ResourceLocation trait(String id) {
+    static ResourceLocation trait(String id) {
         return new ResourceLocation(RpNeeds.MODID, id);
     }
 
@@ -149,107 +135,6 @@ public final class SleepService {
     static double sleepAid(Player p) {
         BodyProvider b = RpCoreAPI.body();
         return b == null ? 0 : b.sleepAid(p);
-    }
-
-    // ------------------------------------------------------------------ место сна
-
-    /** Где спит (для скорости и кошмаров): 0 кровать, 1 спальник, 2 койка, 3 сиденье, 4 лёжа, 5 сидя, −1 не спит. */
-    static int place(ServerPlayer sp) {
-        if (sp.isSleeping()) {
-            BlockPos pos = sp.getSleepingPos().orElse(null);
-            return pos != null && sp.level().getBlockState(pos).is(SLEEPING_BAGS) ? 1 : 0;
-        }
-        return switch (RpCoreAPI.posture(sp)) {
-            case HOSPITAL_BED -> 2;
-            case SEAT -> 3;
-            case LAY -> 4;
-            case SIT -> 5;
-            default -> -1;
-        };
-    }
-
-    static double placeMult(ServerPlayer sp, int place) {
-        if (has(sp, UNFUSSY)) return 1;
-        double m = switch (place) {
-            case 1 -> NeedsConfig.BAG_MULT.get();
-            case 3 -> NeedsConfig.SEAT_MULT.get();
-            case 4 -> NeedsConfig.POSTURE_MULT.get();
-            case 5 -> NeedsConfig.SIT_MULT.get();
-            default -> 1.0;
-        };
-        if (place >= 3 && has(sp, SLEEPYHEAD)) m = Math.max(m, 0.6);
-        return m;
-    }
-
-    static double nightmarePlace(ServerPlayer sp, int place) {
-        if (has(sp, UNFUSSY)) return 1;
-        return switch (place) {
-            case 1 -> 1.5;
-            case 3, 4 -> 2.0;
-            case 5 -> 2.5;
-            default -> 1.0;
-        };
-    }
-
-    // ------------------------------------------------------------------ можно ли уснуть
-
-    /** Почему нельзя уснуть (ключ перевода) или null — можно. Без случайности (Бессонница — отдельно). */
-    static String noSleepReason(ServerPlayer sp, CompoundTag t) {
-        if (temperatureLevel(sp, place(sp)) >= 2) return cold(sp) ? "rpneeds.msg.too_cold" : "rpneeds.msg.too_hot";
-        if (sleepAid(sp) > 0) return null;
-        if (t.getInt("cooldown") > 0) return "rpneeds.msg.just_woke";
-        if (t.getDouble("cafLeft") > 0 && t.getDouble("alert") > 0) return "rpneeds.msg.caffeine";
-        BodyProvider b = RpCoreAPI.body();
-        if (b != null && b.stimulated(sp) && t.getDouble("alert") > 0) return "rpneeds.msg.stimulant";
-        if (RpCoreAPI.stress(sp) >= NeedsConfig.STRESS_NO_SLEEP.get() && (b == null || b.sedation(sp) < 20)) return "rpneeds.msg.stress";
-        if (b != null && b.pain(sp) > NeedsConfig.PAIN_NO_SLEEP.get() && b.sedation(sp) < 20) return "rpneeds.msg.pain";
-        double limit = night(sp) ? NeedsConfig.NIGHT_SLEEP_BELOW.get() : NeedsConfig.DAY_SLEEP_BELOW.get();
-        if (drunk(sp)) limit += NeedsConfig.DRUNK_EASIER.get();
-        if (t.getDouble("alert") >= limit) return "rpneeds.msg.not_sleepy";
-        return null;
-    }
-
-    /** Ночь по часам (как в RP Time: с 18:30 до 5:30), а не по яркости неба — та обновляется с опозданием. */
-    static boolean night(ServerPlayer sp) {
-        long t = sp.level().getDayTime() % 24000L;
-        return t >= 12500 && t < 23500;
-    }
-
-    /** Бессонница (черта или рассудок на исходе): 30 % попыток уснуть не выходят. */
-    static boolean insomniaFails(ServerPlayer sp) {
-        if (sleepAid(sp) > 0) return false;
-        double p = has(sp, INSOMNIA) ? 0.3 : 0;
-        if (RpCoreAPI.sanity(sp) < NeedsConfig.LOW_SANITY.get()) p = Math.max(p, NeedsConfig.LOW_SANITY_FAIL.get());
-        return p > 0 && sp.getRandom().nextDouble() < p;
-    }
-
-    static boolean drunk(ServerPlayer sp) {
-        BodyProvider b = RpCoreAPI.body();
-        return b != null && b.intoxication(sp) >= NeedsConfig.DRUNK_FROM.get();
-    }
-
-    private static boolean cold(ServerPlayer sp) {
-        BodyProvider b = RpCoreAPI.body();
-        return b != null && b.temperatureOffset(sp) < 0;
-    }
-
-    /** Температура для сна: 0 терпимо, 1 умеренный холод или жара, 2 опасно. Кровать, спальник и койка прощают небольшой холод. */
-    static int temperatureLevel(ServerPlayer sp, int place) {
-        BodyProvider b = RpCoreAPI.body();
-        if (b == null) return 0;
-        double off = b.temperatureOffset(sp);
-        if (off < 0 && place >= 0 && place <= 2 && -off < NeedsConfig.TEMP_BED_FORGIVES.get()) return 0;
-        double a = Math.abs(off);
-        return a >= NeedsConfig.TEMP_DANGER.get() ? 2 : a >= NeedsConfig.TEMP_MILD.get() ? 1 : 0;
-    }
-
-    /** Что замедляет сон, кроме места: стресс, хмель, холод или жара. */
-    private static double conditionMult(ServerPlayer sp, int place) {
-        double m = 1;
-        if (RpCoreAPI.stress(sp) >= NeedsConfig.STRESS_SLOW_FROM.get()) m *= NeedsConfig.STRESS_SLEEP_MULT.get();
-        if (drunk(sp)) m *= NeedsConfig.DRUNK_SLEEP_MULT.get();
-        if (temperatureLevel(sp, place) == 1) m *= NeedsConfig.TEMP_SLEEP_MULT.get();
-        return m;
     }
 
     // ------------------------------------------------------------------ тик
@@ -331,7 +216,7 @@ public final class SleepService {
     }
 
     /** Жаворонок и Сова: по часам RP (0 тиков = 6:00). */
-    private static double hourMult(ServerPlayer sp) {
+    static double hourMult(ServerPlayer sp) {
         boolean lark = has(sp, EARLY_BIRD), owl = has(sp, NIGHT_OWL);
         if (!lark && !owl) return 1;
         long dt = sp.server.overworld().getDayTime() % 24000L;
@@ -340,7 +225,7 @@ public final class SleepService {
         return (hour >= 18 || hour < 2) ? 0.7 : (hour >= 6 && hour < 12) ? 1.3 : 1;
     }
 
-    private static void timers(ServerPlayer sp, CompoundTag t) {
+    static void timers(ServerPlayer sp, CompoundTag t) {
         for (String k : new String[]{"cooldown", "rested", "nightmare", "retry"}) {
             int v = t.getInt(k);
             if (v > 0) t.putInt(k, v - 1);
@@ -352,7 +237,7 @@ public final class SleepService {
         }
     }
 
-    private static void tryFallAsleepInBed(ServerPlayer sp, CompoundTag t) {
+    static void tryFallAsleepInBed(ServerPlayer sp, CompoundTag t) {
         if (t.getInt("retry") > 0) return;
         String why = noSleepReason(sp, t);
         if (why == null && insomniaFails(sp)) why = "rpneeds.msg.insomnia";
@@ -409,7 +294,7 @@ public final class SleepService {
         }
     }
 
-    private static void caffeineTick(ServerPlayer sp, CompoundTag t, double seconds) {
+    static void caffeineTick(ServerPlayer sp, CompoundTag t, double seconds) {
         double left = t.getDouble("cafLeft");
         if (left <= 0) return;
         left -= seconds;
@@ -424,7 +309,7 @@ public final class SleepService {
     }
 
     /** Стадии: ощущение при ухудшении и напоминания, глаза клиенту, замедление, микросны, падение без сил. */
-    private static void effects(ServerPlayer sp, CompoundTag t) {
+    static void effects(ServerPlayer sp, CompoundTag t) {
         int stage = stage(sp, t);
         int was = t.getInt("stage");
         if (stage != was) {
@@ -464,9 +349,9 @@ public final class SleepService {
     }
 
     /** Кому какую стадию уже сказали (для глаз клиента). */
-    private static final java.util.Map<UUID, Integer> SENT_STAGE = new java.util.HashMap<>();
+    static final java.util.Map<UUID, Integer> SENT_STAGE = new java.util.HashMap<>();
 
-    private static void sendStage(ServerPlayer sp, int stage) {
+    static void sendStage(ServerPlayer sp, int stage) {
         boolean blink = NeedsConfig.BLINK.get(), nod = NeedsConfig.NOD.get();
         int key = stage | (blink ? 8 : 0) | (nod ? 16 : 0);
         Integer sent = SENT_STAGE.get(sp.getUUID());
@@ -475,7 +360,7 @@ public final class SleepService {
         NeedsNetwork.send(sp, new NeedsNetwork.Stage(stage, blink, nod));
     }
 
-    private static int remindSeconds(int stage) {
+    static int remindSeconds(int stage) {
         return switch (stage) {
             case 1 -> NeedsConfig.REMIND_STAGE1.get();
             case 2 -> NeedsConfig.REMIND_STAGE2.get();
@@ -484,7 +369,7 @@ public final class SleepService {
     }
 
     /** Ощущение стадии (одно из двух). */
-    private static void sense(ServerPlayer sp, int stage) {
+    static void sense(ServerPlayer sp, int stage) {
         sense(sp, "rpneeds.sense.s" + Math.min(3, stage) + "." + sp.getRandom().nextInt(2));
     }
 
@@ -530,157 +415,6 @@ public final class SleepService {
         if (m != null && Math.abs(m.getAmount() + amount) < 1e-6) return;
         a.removeModifier(MAX_STAMINA);
         if (amount > 0) a.addTransientModifier(new AttributeModifier(MAX_STAMINA, "rpneeds sleep debt", -amount, AttributeModifier.Operation.MULTIPLY_TOTAL));
-    }
-
-    // ------------------------------------------------------------------ события сна
-
-    /** Лечь в кровать можно в любое время суток (уснуть — по правилам выше). */
-    public static void onSleepTime(SleepingTimeCheckEvent e) {
-        if (e.getEntity() instanceof ServerPlayer sp && !sp.isSpectator()) e.setResult(Event.Result.ALLOW);
-    }
-
-    /** Для ночи RP Time: лежит в кровати, но не уснул — не спит. */
-    public static void onSleepCount(RpSleepCountEvent e) {
-        if (e.getEntity() instanceof ServerPlayer sp && sp.isSleeping() && !data(sp).getBoolean("asleep"))
-            e.setCount(RpSleepCountEvent.Count.BLOCKS);
-    }
-
-    /** Сидя, лёжа, на сиденье, на койке ({@code /sleep}): те же условия, что в кровати. */
-    public static void onPostureSleep(RpPostureSleepEvent e) {
-        if (!(e.getEntity() instanceof ServerPlayer sp) || !counts(sp)) return;
-        String why = noSleepReason(sp, data(sp));
-        if (why == null && insomniaFails(sp)) why = "rpneeds.msg.insomnia";
-        if (why != null) e.deny(Component.translatable(why));
-    }
-
-    /** Проснулся сидя или лёжа (сам, удар, Shift, мы): откат и вялость. */
-    public static void onPostureWake(RpPostureWakeEvent e) {
-        if (e.getEntity() instanceof ServerPlayer sp) afterWake(sp, data(sp));
-    }
-
-    /** Удар будит и в кровати — ванилла при этом поднимает с кровати (позу будит RP Core, поза остаётся). */
-    public static void onHurt(LivingHurtEvent e) {
-        if (!(e.getEntity() instanceof ServerPlayer sp) || e.getAmount() <= 0) return;
-        CompoundTag t = data(sp);
-        if (!t.getBoolean("asleep")) return;
-        // Ванилла от удара уже подняла его с кровати — здесь только «проснулся»: откат, вялость, сообщение.
-        if (sp.isSleeping()) wake(sp, "rpneeds.msg.woke_hurt", false);
-        else {
-            setBedAsleep(sp, t, false);
-            afterWake(sp, t);
-            sp.displayClientMessage(Component.translatable("rpneeds.msg.woke_hurt"), true);
-        }
-    }
-
-    /** Взрывы рядом будят (Крепкий сон и снотворное — только совсем рядом). */
-    public static void onExplosion(ExplosionEvent.Detonate e) {
-        if (!(e.getLevel() instanceof ServerLevel level)) return;
-        Vec3 at = e.getExplosion().getPosition();
-        for (ServerPlayer sp : level.players()) {
-            if (!asleep(sp)) continue;
-            double r = Wakers.sound(sp) ? NeedsConfig.EXPLOSION_RADIUS.get() : 8;
-            if (sp.position().distanceToSqr(at) <= r * r) wake(sp, "rpneeds.msg.woke_noise", false);
-        }
-    }
-
-    /** Будильник (RP Core alarm, потом — КПК). */
-    public static void onAlarm(RpAlarmEvent e) {
-        for (ServerPlayer sp : e.level().players())
-            if (asleep(sp) && sp.position().distanceToSqr(e.pos()) <= e.radius() * e.radius()) wake(sp, "rpneeds.msg.woke_alarm", false);
-    }
-
-    // ------------------------------------------------------------------ кофеин
-
-    public static void onConsume(RpConsumeEvent e) {
-        if (!(e.getEntity() instanceof ServerPlayer sp) || !counts(sp)) return;
-        Consumables.Entry c = Consumables.forItem(e.stack());
-        if (c == null || c.caffeine() <= 0) return;
-        double dose = c.caffeine() * Math.max(0, e.fraction());
-        CompoundTag t = data(sp);
-        change(t, NeedsConfig.CAFFEINE_BOOST.get() * dose);
-        t.putDouble("cafDose", t.getDouble("cafDose") + dose);
-        t.putDouble("cafLeft", Math.max(t.getDouble("cafLeft"), NeedsConfig.CAFFEINE_SHARE.get() * day()));
-    }
-
-    // ------------------------------------------------------------------ прокрутка и выход из игры
-
-    /** Прокрутка: спящий высыпается по времени RP, бодрствующий устаёт мягко — не ниже порога Core и не ниже, чем был. */
-    public static void onSkip(RpTimeSkipEvent e) {
-        if (!(e.getEntity() instanceof ServerPlayer sp) || !counts(sp) || e.scope() != RpTimeSkipEvent.Scope.ALL) return;
-        CompoundTag t = data(sp);
-        // Секунды события посчитаны по длине суток без /time speed — и доли суток считаем так же.
-        double day = Math.max(60, RpCoreAPI.dayLengthSeconds()), secs = e.seconds();
-        if (e.sleeping()) {
-            // Место сна (кровать, спальник, поза) и качество от команды (усадили спать — ×0,8).
-            int place = place(sp);
-            double mult = placeMult(sp, place < 0 ? 5 : place) * e.quality() * conditionMult(sp, place < 0 ? 5 : place);
-            if (has(sp, SHORT)) mult *= 1.5;
-            if (has(sp, INSOMNIA)) mult *= 0.7;
-            change(t, 100.0 / (NeedsConfig.FULL_SLEEP_SHARE.get() * day) * secs * mult);
-            t.putInt("place", place < 0 ? 5 : place);
-            t.putInt("slept", (int) Math.min(Integer.MAX_VALUE / 2, t.getInt("slept") + secs * mult));
-        } else {
-            double before = t.getDouble("alert");
-            change(t, -100.0 / (NeedsConfig.AWAKE_SHARE.get() * day) * secs);
-            double floor = Math.min(RpCoreAPI.skipFloor() * 100, before);
-            if (t.getDouble("alert") < floor) {
-                t.putDouble("alert", floor);
-                t.putDouble("debt", 0);
-            }
-        }
-        caffeineTick(sp, t, secs);
-        // /rptime sleep: после прокрутки все просыпаются, как утром (поза и кровать остаются).
-        if (e.wakeAfter()) {
-            wake(sp, "rpneeds.msg.woke_morning", false);
-            t.putInt("cooldown", 0);
-        }
-    }
-
-    public static void onSkipOffline(RpTimeSkipOfflineEvent e) {
-        if (e.sleeping()) NightMark.get(e.server()).mark(System.currentTimeMillis());
-    }
-
-    public static void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
-        if (e.getEntity() instanceof ServerPlayer sp) {
-            CompoundTag t = data(sp);
-            t.putLong("logout", System.currentTimeMillis());
-            t.putBoolean("asleep", false);
-            slow(sp, SLOW, 0);
-            slow(sp, HEAVY, 0);
-            SENT_STAGE.remove(sp.getUUID());
-        }
-    }
-
-    /** Вход: не был в сети два полных сна — выспался (раз в игровые сутки); ночь проспали без него — тоже. */
-    public static void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
-        if (!(e.getEntity() instanceof ServerPlayer sp)) return;
-        CompoundTag t = data(sp);
-        t.putBoolean("asleep", false);
-        long logout = t.getLong("logout");
-        if (logout <= 0) return;
-        long now = System.currentTimeMillis();
-        double away = (now - logout) / 1000.0;
-        double need = NeedsConfig.OFFLINE_REST_SLEEPS.get() * NeedsConfig.FULL_SLEEP_SHARE.get() * day();
-        long gameDay = sp.server.overworld().getDayTime() / 24000L;
-        boolean night = NightMark.get(sp.server).last() > logout;
-        boolean longAway = need > 0 && away >= need && t.getLong("restDay") != gameDay + 1;
-        if (night || longAway) {
-            t.putDouble("alert", 100);
-            t.putDouble("debt", 0);
-            t.putInt("stage", 0);
-            t.putInt("rested", (int) (day() / 6));
-            if (longAway) t.putLong("restDay", gameDay + 1);
-        }
-    }
-
-    /** Вайп персонажа: бодрость как у нового. */
-    public static void onWipe(faygolover.rpcore.api.event.RpCharacterWipeEvent e) {
-        if (!(e.getEntity() instanceof ServerPlayer sp)) return;
-        sp.getPersistentData().remove(TAG);
-        slow(sp, SLOW, 0);
-        slow(sp, HEAVY, 0);
-        maxStamina(sp, 0);
-        SENT_STAGE.remove(sp.getUUID());
     }
 
     static void snore(ServerPlayer sp) {

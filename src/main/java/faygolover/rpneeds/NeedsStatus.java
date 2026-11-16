@@ -52,7 +52,7 @@ final class NeedsStatus implements StatusLines.Source {
                         (int) Math.round(t.getDouble("debt") / 60.0), (int) Math.round(t.getDouble("cafLeft") / 60.0),
                         t.getInt("cooldown")));
                 out.add(new StatusLines.Line("rpneeds.status.gm_stage" + stage));
-                if (asleep) out.add(new StatusLines.Line("rpneeds.status.gm_place" + Math.max(0, SleepService.place(sp))));
+                if (asleep) out.add(new StatusLines.Line("rpneeds.status.gm_place" + Math.max(0, SleepPlace.place(sp))));
                 else if (sp.isSleeping()) out.add(new StatusLines.Line("rpneeds.status.gm_in_bed"));
                 double aid = SleepService.sleepAid(sp);
                 if (aid > 0) out.add(new StatusLines.Line("rpneeds.status.gm_aid", (int) Math.round(aid * 100)));

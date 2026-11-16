@@ -46,21 +46,21 @@ public final class RpNeeds {
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, NeedsConfig.SPEC);
         var bus = MinecraftForge.EVENT_BUS;
         bus.addListener(SleepService::onPlayerTick);
-        bus.addListener(SleepService::onSleepTime);
-        bus.addListener(SleepService::onHurt);
-        bus.addListener(SleepService::onExplosion);
-        bus.addListener(SleepService::onLogin);
-        bus.addListener(SleepService::onLogout);
+        bus.addListener(SleepEvents::onSleepTime);
+        bus.addListener(SleepEvents::onHurt);
+        bus.addListener(SleepEvents::onExplosion);
+        bus.addListener(SleepEvents::onLogin);
+        bus.addListener(SleepEvents::onLogout);
         SleepService.registerData();
-        bus.addListener(EventPriority.NORMAL, false, RpPostureSleepEvent.class, SleepService::onPostureSleep);
-        bus.addListener(EventPriority.NORMAL, false, RpPostureWakeEvent.class, SleepService::onPostureWake);
-        bus.addListener(EventPriority.LOW, false, RpSleepCountEvent.class, SleepService::onSleepCount);
-        bus.addListener(EventPriority.NORMAL, false, RpAlarmEvent.class, SleepService::onAlarm);
-        bus.addListener(EventPriority.NORMAL, false, RpConsumeEvent.class, SleepService::onConsume);
-        bus.addListener(EventPriority.NORMAL, false, RpTimeSkipEvent.class, SleepService::onSkip);
-        bus.addListener(EventPriority.NORMAL, false, RpTimeSkipOfflineEvent.class, SleepService::onSkipOffline);
+        bus.addListener(EventPriority.NORMAL, false, RpPostureSleepEvent.class, SleepEvents::onPostureSleep);
+        bus.addListener(EventPriority.NORMAL, false, RpPostureWakeEvent.class, SleepEvents::onPostureWake);
+        bus.addListener(EventPriority.LOW, false, RpSleepCountEvent.class, SleepEvents::onSleepCount);
+        bus.addListener(EventPriority.NORMAL, false, RpAlarmEvent.class, SleepEvents::onAlarm);
+        bus.addListener(EventPriority.NORMAL, false, RpConsumeEvent.class, SleepEvents::onConsume);
+        bus.addListener(EventPriority.NORMAL, false, RpTimeSkipEvent.class, SleepEvents::onSkip);
+        bus.addListener(EventPriority.NORMAL, false, RpTimeSkipOfflineEvent.class, SleepEvents::onSkipOffline);
         bus.addListener(RpNeeds::onCommands);
-        bus.addListener(EventPriority.NORMAL, false, faygolover.rpcore.api.event.RpCharacterWipeEvent.class, SleepService::onWipe);
+        bus.addListener(EventPriority.NORMAL, false, faygolover.rpcore.api.event.RpCharacterWipeEvent.class, SleepEvents::onWipe);
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> faygolover.rpneeds.client.NeedsClient::init);
     }
 
