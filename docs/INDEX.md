@@ -4,13 +4,13 @@
 **Руками не править**: пересоздаётся скриптом. Смысл, потоки работы и рецепты — в `docs/MAP.md`.
 Разбор по шаблонам, без компиляции: необычно оформленная регистрация может отсутствовать в списках.
 
-Всего: 15 файлов, 2188 строк Java.
+Всего: 15 файлов, 2191 строк Java.
 
 ## 1. Пакеты
 
 | Пакет | Файлов | Строк |
 |---|---:|---:|
-| `faygolover.rpneeds` | 10 | 1365 |
+| `faygolover.rpneeds` | 10 | 1368 |
 | `faygolover.rpneeds.client` | 1 | 146 |
 | `faygolover.rpneeds.gametest` | 2 | 624 |
 | `faygolover.rpneeds.integration` | 2 | 53 |
@@ -22,7 +22,7 @@
 - `NeedsNetwork`, 91 — Сетевой канал rpneeds:main: микросон и «уснул ли в кровати» — самому игроку.
 - `NeedsStatus`, 63 — Строки сна для RP Medicine: сам игрок — ощущениями в своих состояниях, другие при осмотре — только сильную усталость и сон, ГМ сканером и в панели — цифры.
 - `NightMark`, 36 — Когда в последний раз проспали ночь (реальное время, мс): вышедшие до этого при входе выспались.
-- `RpNeeds`, 123 — RP Needs — потребности: сон (0.2.0, дизайн «RP Needs: сон»), дальше чистота (план docs/00_plan.md).
+- `RpNeeds`, 126 — RP Needs — потребности: сон (0.2.0, дизайн «RP Needs: сон»), дальше чистота (план docs/00_plan.md).
 - `SleepEvents`, 184 — События, на которые отвечает сон: ванильная проверка времени сна, счёт спящих для ускорения ночи, позы RP Core, урон и взрывы (будят), будильник, кофеин, прокрутка времени, вход и выход игрока, вайп персонажа.
 - `SleepPlace`, 118 — Где и можно ли спать: место сна (кровать, спальник, койка, поза), его качество, причины «не уснуть», ночь, бессонница, холод.
 - `SleepService`, 424 — Сон (сервер), дизайн «RP Needs: сон» 29–30.10.
@@ -94,7 +94,7 @@
 
 ## 8. Что берёт из RP Core и что ему даёт
 
-Методы `RpCoreAPI` (сколько вызовов): `Posture` 2, `SpeechChannel` 2, `body` 6, `collapseAsleep` 1, `dayLengthSeconds` 2, `hasTrait` 2, `nutrition` 1, `posture` 2, `postureSleeping` 2, `registerModule` 1, `registerSleep` 1, `registerSpeechFilter` 1, `rpPerReal` 1, `sanity` 2, `skipFloor` 1, `staminaAttribute` 1, `stress` 2, `timeRunning` 1, `unconscious` 1, `wakeFromPosture` 1.
+Методы `RpCoreAPI` (сколько вызовов): `Posture` 2, `SpeechChannel` 2, `body` 6, `collapseAsleep` 1, `dayLengthSeconds` 2, `hasTrait` 2, `nutrition` 1, `posture` 2, `postureSleeping` 2, `registerModule` 1, `registerSleep` 1, `registerSpeechFilter` 1, `reportCompat` 2, `rpPerReal` 1, `sanity` 2, `skipFloor` 1, `staminaAttribute` 1, `stress` 2, `timeRunning` 1, `unconscious` 1, `wakeFromPosture` 1.
 
 Реализует розетки: Source ← `NeedsStatus`.
 

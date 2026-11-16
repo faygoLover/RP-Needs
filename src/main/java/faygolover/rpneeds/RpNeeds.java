@@ -70,6 +70,9 @@ public final class RpNeeds {
             StatusLines.register(NeedsStatus.INSTANCE);
             RpCoreAPI.registerSpeechFilter(new net.minecraft.resources.ResourceLocation(MODID, "drowsy"), SleepService::filterSpeech);
             RpCoreAPI.registerModule(MODID, "потребности: сон");
+            // Необязательные интеграции — в общий отчёт RP Core (/rpcore compat).
+            faygolover.rpcore.api.RpCoreAPI.reportCompat(MODID, "tacz");
+            faygolover.rpcore.api.RpCoreAPI.reportCompat(MODID, "voicechat");
             RpCoreAPI.registerSleep(new faygolover.rpcore.api.SleepProvider() {
                 @Override
                 public boolean asleep(net.minecraft.world.entity.player.Player p) {
